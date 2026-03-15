@@ -69,7 +69,7 @@
 	VOICEDIR="/etc/asterisk/scripts/ar-news/"
 
 	# TMPDIR - Directory for temporary files used to combine silence padding
-	# with announcement audio files before playback. /tmp is fine for ASL3.
+	# with announcement audio files before playback.
 
 	TMPDIR="/tmp"
 	
