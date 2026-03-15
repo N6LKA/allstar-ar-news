@@ -35,7 +35,7 @@
 # and play ARRL news on node 501260, Locally
 #
 	# Play ARRL Audio News on Saturday at 9:00 PM local time on node 501260, - Schedule script at 8:30 PM
-	# 30 20 * * 6 /etc/asterisk/local/AR_News/AR_News.sh ARRL 21:00 501260 L &> /dev/null 2>&1
+	# 30 20 * * 6 /etc/asterisk/scripts/ar-news/play_news.sh ARRL 21:00 501260 L >/dev/null 2>&1
 
 # The audio files ARRLstart5, ARRLstart10, ARRLstart, ARRLstop
 # and ARNstart, ARNstart10, ARNstart, ARNstop
@@ -66,7 +66,7 @@
 	# VOICEDIR - Directory for playnews voice files
 	# Usually in the same directory as the play_news script.
 	
-	VOICEDIR="/etc/asterisk/local/AR_News/"
+	VOICEDIR="/etc/asterisk/scripts/ar-news/"
 
 	# TMPDIR - Directory for temporary file storage
 	# Note if at all possible this should not be on the SD card.
@@ -80,8 +80,14 @@
 	# the audio news, then re-enable LAT after the news is finished playing.
 	# If your repeater/node uses the LAT, set the following to "1" to enable.
 	# Otherwise, set to "0" to disable this function.
-	
+
 	LNKACTTIMER="1"
+
+	# LNKACTTYPE - Which link activity timer to use when LNKACTTIMER=1.
+	#   "monitor" - Use asl3-link-activity-monitor (/usr/local/bin/lnkact)
+	#   "native"  - Use the ASL3 native link activity timer (cop 46/45)
+
+	LNKACTTYPE="monitor"
 
 	# Set the node numbers to connect to for ARRL and ARN news.
 	# At the time of writing this script, AllStar node 516229 
@@ -252,13 +258,15 @@ echo "Disabling telemetry."
 /usr/sbin/asterisk -rx "rpt cmd $NODE cop 34"
 
 # Disable Link Activity Timer
-if [ $LNKACTTIMER == "1" ]
-	then
+if [ $LNKACTTIMER == "1" ]; then
 	echo "Disabling Link Activity Timer"
-	# Legacy method - native ASL3 link activity timer (kept for reference)
-	# /usr/sbin/asterisk -rx "rpt cmd $NODE cop 46"
-	# Use lnkact-monitor instead
-	/usr/local/bin/lnkact disable
+	if [ "$LNKACTTYPE" == "native" ]; then
+		# Native ASL3 link activity timer
+		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 46"
+	else
+		# asl3-link-activity-monitor
+		/usr/local/bin/lnkact disable
+	fi
 fi
 
 #If Mode = localplay, then Disconnect from other nodes.
@@ -295,14 +303,14 @@ while true; do
     fi
     sleep 1
     ((elapsed_time++))
-    if [ $elapsed_time -gt 1200 ]; then
+    if [ $elapsed_time -gt 1500 ]; then
         echo "Backup timer exceeded. Assuming news has finished."
         break
     fi
 done
 
 # Check if the news node disconnected or backup timer exceeded
-if [ $elapsed_time -le 1200 ]; then
+if [ $elapsed_time -le 1500 ]; then
     echo "Node $NEWSNODE disconnected"
 else
     echo "Backup timer exceeded. Assuming news has finished."
@@ -310,11 +318,14 @@ fi
 
 # Re-Enable Link Activity Timer
 if [ $LNKACTTIMER == "1" ]; then
-    echo "Enabling Link Activity Timer"
-    # Legacy method - native ASL3 link activity timer (kept for reference)
-    # /usr/sbin/asterisk -rx "rpt cmd $NODE cop 45"
-    # Use lnkact-monitor instead
-    /usr/local/bin/lnkact enable
+	echo "Enabling Link Activity Timer"
+	if [ "$LNKACTTYPE" == "native" ]; then
+		# Native ASL3 link activity timer
+		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 45"
+	else
+		# asl3-link-activity-monitor
+		/usr/local/bin/lnkact enable
+	fi
 fi
 
 

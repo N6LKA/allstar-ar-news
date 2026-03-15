@@ -35,7 +35,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/allstar-ar-news/main/i
 ```
 
 The installer will:
-- Download all scripts and audio files to `/etc/asterisk/local/AR_News/`
+- Download all scripts and audio files to `/etc/asterisk/scripts/ar-news/`
 - Prompt for your node number and desired play times
 - Add or update cron entries in the **asterisk user's** crontab
 
@@ -47,13 +47,13 @@ Must be run as **root** or the **asterisk** user.
 
 ```bash
 # Play ARRL news immediately
-/etc/asterisk/local/AR_News/play_news.sh ARRL NOW <NodeNumber> L
+/etc/asterisk/scripts/ar-news/play_news.sh ARRL NOW <NodeNumber> L
 
 # Play ARN news at a scheduled time (with pre-announcements)
-/etc/asterisk/local/AR_News/play_news.sh ARN 07:30 <NodeNumber> L
+/etc/asterisk/scripts/ar-news/play_news.sh ARN 07:30 <NodeNumber> L
 
 # Cancel news during playback (emergency use)
-/etc/asterisk/local/AR_News/cancel_news.sh <NodeNumber>
+/etc/asterisk/scripts/ar-news/cancel_news.sh <NodeNumber>
 ```
 
 ### Arguments
@@ -77,8 +77,8 @@ Default schedule (customizable during install):
 
 ```
 # ARRL/ARN Audio News
-00 07 * * 6 /etc/asterisk/local/AR_News/play_news.sh ARRL 07:30 <NodeNumber> L >/dev/null 2>&1
-00 07 * * 7 /etc/asterisk/local/AR_News/play_news.sh ARN  07:30 <NodeNumber> L >/dev/null 2>&1
+00 07 * * 6 /etc/asterisk/scripts/ar-news/play_news.sh ARRL 07:30 <NodeNumber> L >/dev/null 2>&1
+00 07 * * 7 /etc/asterisk/scripts/ar-news/play_news.sh ARN  07:30 <NodeNumber> L >/dev/null 2>&1
 ```
 
 To modify times after install, edit the asterisk user's crontab:
@@ -110,9 +110,10 @@ Key settings at the top of `play_news.sh`:
 
 | Variable | Default | Description |
 |---|---|---|
-| `VOICEDIR` | `/etc/asterisk/local/AR_News/` | Path to audio files |
+| `VOICEDIR` | `/etc/asterisk/scripts/ar-news/` | Path to audio files |
 | `TMPDIR` | `/tmp` | Temporary file storage |
-| `LNKACTTIMER` | `1` | Set to `1` to disable link activity monitor during playback |
+| `LNKACTTIMER` | `1` | Set to `1` to manage link activity timer during playback, `0` to skip |
+| `LNKACTTYPE` | `monitor` | `monitor` = use asl3-link-activity-monitor; `native` = use ASL3 cop 46/45 |
 | `ARRLNEWSNODE` | `516229` | AllStar node for ARRL news |
 | `ARNNEWSNODE` | `3006397` | AllStar/Echolink node for ARN news |
 | `logfile` | `/var/log/asterisk/connectlog` | Connection log for disconnect detection |
@@ -124,7 +125,7 @@ Key settings at the top of `play_news.sh`:
 The `cancel_news.sh` script is designed to be triggered by a DTMF macro (e.g. `*999`) for emergency cancellation during playback:
 
 ```bash
-/etc/asterisk/local/AR_News/cancel_news.sh <NodeNumber>
+/etc/asterisk/scripts/ar-news/cancel_news.sh <NodeNumber>
 ```
 
 It will disconnect the news nodes, kill the `play_news.sh` process, and restore normal repeater operation.
