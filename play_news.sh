@@ -68,12 +68,10 @@
 	
 	VOICEDIR="/etc/asterisk/scripts/ar-news/"
 
-	# TMPDIR - Directory for temporary file storage
-	# Note if at all possible this should not be on the SD card.
-	# Use of /tmp or a USB mounted stick is preferred
-	# Note that the BBB may not have enough memory in /tmp to process
+	# TMPDIR - Directory for temporary files used to combine silence padding
+	# with announcement audio files before playback. /tmp is fine for ASL3.
 
-	TMPDIR="/tmp" 
+	TMPDIR="/tmp"
 	
 	# The following will enable/disable use of the repeater link activity timer.
 	# If enabled (1) the script will disable the link activity timer (LAT) while playing
