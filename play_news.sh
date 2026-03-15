@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script is based on the playnews script that was originally written by Doug Crompton
-#for HamVOIP. It has been completely re-written to work by connecting to the ARRL/ARN news nodes
+# for HamVOIP. It has been completely re-written to work by connecting to the ARRL/ARN news nodes
 # for playback rather than downloading the audio file and breaking it up on the local device. 
 # This allows the repeater breaks for ID at the proper times during the playback, instead of 
 # breaking at odd times.
@@ -84,7 +84,8 @@
 	LNKACTTIMER="1"
 
 	# LNKACTTYPE - Which link activity timer to use when LNKACTTIMER=1.
-	#   "monitor" - Use asl3-link-activity-monitor (/usr/local/bin/lnkact)
+	#   "monitor" - Use asl3-link-activity-monitor by N6LKA (/usr/local/bin/lnkact)
+	#              See: https://github.com/N6LKA/asl3-link-activity-monitor
 	#   "native"  - Use the ASL3 native link activity timer (cop 46/45)
 
 	LNKACTTYPE="monitor"
@@ -264,7 +265,7 @@ if [ $LNKACTTIMER == "1" ]; then
 		# Native ASL3 link activity timer
 		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 46"
 	else
-		# asl3-link-activity-monitor
+		# asl3-link-activity-monitor by N6LKA
 		/usr/local/bin/lnkact disable
 	fi
 fi
@@ -323,7 +324,7 @@ if [ $LNKACTTIMER == "1" ]; then
 		# Native ASL3 link activity timer
 		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 45"
 	else
-		# asl3-link-activity-monitor
+		# asl3-link-activity-monitor by N6LKA
 		/usr/local/bin/lnkact enable
 	fi
 fi
