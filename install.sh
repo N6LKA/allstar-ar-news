@@ -32,9 +32,10 @@ else
     UPDATING=false
 fi
 
-# --- Check/install asl-tts dependency ---
+# --- Check/install dependencies ---
 echo ""
 echo "--- Checking dependencies ---"
+
 if ! command -v asl-tts &>/dev/null; then
     echo "asl-tts not found. Installing asl3-tts..."
     if ! apt-get install -y asl3-tts; then
@@ -44,6 +45,19 @@ if ! command -v asl-tts &>/dev/null; then
     echo -e "${GREEN}asl3-tts installed.${NC}"
 else
     echo -e "${GREEN}asl-tts found.${NC}"
+fi
+
+if ! command -v lnkact &>/dev/null; then
+    echo "asl3-link-activity-monitor not found. Installing..."
+    if apt-get install -y asl3-link-activity-monitor; then
+        echo -e "${GREEN}asl3-link-activity-monitor installed.${NC}"
+    else
+        echo -e "${YELLOW}WARNING: Could not install asl3-link-activity-monitor.${NC}"
+        echo "         Install it manually: https://github.com/N6LKA/asl3-link-activity-monitor"
+        echo "         Or set LNKACTTIMER=0 (or LNKACTTYPE=native) in ar-news.conf."
+    fi
+else
+    echo -e "${GREEN}asl3-link-activity-monitor found.${NC}"
 fi
 
 # --- Collect user inputs ---
