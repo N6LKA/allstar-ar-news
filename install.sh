@@ -74,7 +74,7 @@ fi
 AUDIO_FILES=(
     ARRLstart.ul ARRLstart10.ul ARRLstart5.ul ARRLstop.ul
     ARNstart.ul  ARNstart10.ul  ARNstart5.ul  ARNstop.ul
-    ARRL-QST-NEWS.ul ARN-QST-NEWS.ul
+    arrl-qst-news.ul arn-qst-news.ul
     silence1.ul silence2.ul silence3.ul
 )
 for f in "${AUDIO_FILES[@]}"; do
@@ -91,7 +91,7 @@ done
 TEXT_FILES=(
     ARRLstart ARRLstart10 ARRLstart5 ARRLstop
     ARNstart  ARNstart10  ARNstart5  ARNstop
-    ARRL-QST-NEWS.txt ARN-QST-NEWS.txt
+    arrl-qst-news.txt arn-qst-news.txt
 )
 for f in "${TEXT_FILES[@]}"; do
     echo "Downloading $f..."

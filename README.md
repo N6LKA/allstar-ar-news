@@ -102,7 +102,7 @@ Pre-recorded announcement files are included and installed with the script. The 
 | `ARRLstart5.ul` / `ARNstart5.ul` | 5-minute pre-announcement |
 | `ARRLstart.ul` / `ARNstart.ul` | News start announcement |
 | `ARRLstop.ul` / `ARNstop.ul` | News end announcement |
-| `ARRL-QST-NEWS.ul` / `ARN-QST-NEWS.ul` | QST pre-announcement played before connecting |
+| `arrl-qst-news.ul` / `arn-qst-news.ul` | QST pre-announcement played before connecting |
 | `silence1.ul`, `silence2.ul`, `silence3.ul` | Silence padding |
 
 ---
