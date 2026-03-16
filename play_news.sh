@@ -61,46 +61,23 @@
 #
 #   DO NOT use the the "NOW" time parameter in a cron !!!
 
-# ===== The following variable needs to be set if different for your install =====
+# ===== Load user configuration =====
 
-	# VOICEDIR - Directory for playnews voice files
-	# Usually in the same directory as the play_news script.
-	
-	VOICEDIR="/etc/asterisk/scripts/ar-news/"
+	# All user-configurable settings are in ar-news.conf in the same directory
+	# as this script. Edit that file to change settings.
 
-	# TMPDIR - Directory for temporary files used to combine silence padding
-	# with announcement audio files before playback.
+	SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+	CONFIG_FILE="$SCRIPT_DIR/ar-news.conf"
 
-	TMPDIR="/tmp"
-	
-	# The following will enable/disable use of the repeater link activity timer.
-	# If enabled (1) the script will disable the link activity timer (LAT) while playing
-	# the audio news, then re-enable LAT after the news is finished playing.
-	# If your repeater/node uses the LAT, set the following to "1" to enable.
-	# Otherwise, set to "0" to disable this function.
+	if [ ! -f "$CONFIG_FILE" ]; then
+		echo "Error: Configuration file not found: $CONFIG_FILE"
+		echo "Make sure ar-news.conf exists in the same directory as this script."
+		exit 1
+	fi
+	# shellcheck source=ar-news.conf
+	source "$CONFIG_FILE"
 
-	LNKACTTIMER="1"
-
-	# LNKACTTYPE - Which link activity timer to use when LNKACTTIMER=1.
-	#   "monitor" - Use asl3-link-activity-monitor by N6LKA (/usr/local/bin/lnkact)
-	#              See: https://github.com/N6LKA/asl3-link-activity-monitor
-	#   "native"  - Use the ASL3 native link activity timer (cop 46/45)
-
-	LNKACTTYPE="monitor"
-
-	# Set the node numbers to connect to for ARRL and ARN news.
-	# At the time of writing this script, AllStar node 516229 
-	# will play ARRL News, and Echolink node 6397 (3006397)
-	# will play ARN.
-	
-	ARRLNEWSNODE="516229"
-	ARNNEWSNODE="3006397"
-
-	# Path to logfile so script can monitor connection and disconnect notifications.
-	
-	logfile="/var/log/asterisk/connectlog"
-
-# ===== End User defines =====
+# ===== End configuration load =====
 
 # Define a variable to keep track of elapsed time
 elapsed_time=0

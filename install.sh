@@ -49,6 +49,26 @@ for script in play_news.sh cancel_news.sh; do
     chmod +x "$INSTALL_DIR/$script"
 done
 
+# --- Download configuration file ---
+if [[ "$UPDATING" == "true" ]]; then
+    # On update, preserve existing user config; download as .new for reference
+    echo "Downloading ar-news.conf.new (preserving your existing ar-news.conf)..."
+    curl -fsSL "$REPO/ar-news.conf" -o "$INSTALL_DIR/ar-news.conf.new"
+    if [[ $? -ne 0 ]]; then
+        echo -e "${YELLOW}WARNING: Failed to download ar-news.conf.new${NC}"
+    else
+        chmod 644 "$INSTALL_DIR/ar-news.conf.new"
+    fi
+else
+    echo "Downloading ar-news.conf..."
+    curl -fsSL "$REPO/ar-news.conf" -o "$INSTALL_DIR/ar-news.conf"
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}ERROR: Failed to download ar-news.conf${NC}"
+        exit 1
+    fi
+    chmod 644 "$INSTALL_DIR/ar-news.conf"
+fi
+
 # --- Download audio files ---
 AUDIO_FILES=(
     ARRLstart.ul ARRLstart10.ul ARRLstart5.ul ARRLstop.ul
@@ -164,6 +184,9 @@ echo ""
 echo "Cron schedule (asterisk user):"
 echo "  ARRL news: Saturdays  at $ARRL_TIME  (cron starts 30 min early)"
 echo "  ARN news:  Sundays    at $ARN_TIME  (cron starts 30 min early)"
+echo ""
+echo "Configuration file:"
+echo "  $INSTALL_DIR/ar-news.conf"
 echo ""
 echo "Manual usage (run as root or asterisk):"
 echo "  $INSTALL_DIR/play_news.sh ARRL|ARN HH:MM|NOW <NodeNumber> L|G"
