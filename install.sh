@@ -80,17 +80,45 @@ if [[ "$UPDATING" == "false" ]]; then
     done
 fi
 
-read -rp "Enter ARRL news play time in 24h format HH:MM [default: 07:30]: " ARRL_TIME
-ARRL_TIME=${ARRL_TIME:-07:30}
+echo ""
+echo "--- News Slot 1 (defaults: ARRL / Saturday / 07:30) ---"
+echo ""
+echo "  News type:"
+echo "    1) ARRL Audio News"
+echo "    2) Amateur Radio Newsline (ARN)"
+while true; do
+    read -rp "  Select [1-2, default: 1]: " _CHOICE
+    _CHOICE=${_CHOICE:-1}
+    case "$_CHOICE" in
+        1) SLOT1_TYPE="ARRL"; break ;;
+        2) SLOT1_TYPE="ARN";  break ;;
+        *) echo -e "${RED}Enter 1 or 2.${NC}" ;;
+    esac
+done
+read -rp "  Day of week [default: Saturday]: " SLOT1_DAY
+SLOT1_DAY=${SLOT1_DAY:-Saturday}
+read -rp "  Play time in 24h format HH:MM [default: 07:30]: " SLOT1_TIME
+SLOT1_TIME=${SLOT1_TIME:-07:30}
 
-read -rp "Enter ARN news play time in 24h format HH:MM  [default: 07:30]: " ARN_TIME
-ARN_TIME=${ARN_TIME:-07:30}
-
-read -rp "Enter day of week for ARRL news [default: Saturday]: " ARRL_DAY
-ARRL_DAY=${ARRL_DAY:-Saturday}
-
-read -rp "Enter day of week for ARN news  [default: Sunday]: " ARN_DAY
-ARN_DAY=${ARN_DAY:-Sunday}
+echo ""
+echo "--- News Slot 2 (defaults: ARN / Sunday / 07:30) ---"
+echo ""
+echo "  News type:"
+echo "    1) ARRL Audio News"
+echo "    2) Amateur Radio Newsline (ARN)"
+while true; do
+    read -rp "  Select [1-2, default: 2]: " _CHOICE
+    _CHOICE=${_CHOICE:-2}
+    case "$_CHOICE" in
+        1) SLOT2_TYPE="ARRL"; break ;;
+        2) SLOT2_TYPE="ARN";  break ;;
+        *) echo -e "${RED}Enter 1 or 2.${NC}" ;;
+    esac
+done
+read -rp "  Day of week [default: Sunday]: " SLOT2_DAY
+SLOT2_DAY=${SLOT2_DAY:-Sunday}
+read -rp "  Play time in 24h format HH:MM [default: 07:30]: " SLOT2_TIME
+SLOT2_TIME=${SLOT2_TIME:-07:30}
 
 # --- Helper: convert 24h time to 12h AM/PM ---
 convert_time_12h() {
@@ -134,18 +162,18 @@ compute_cron_start() {
     printf "%02d %02d" $(( total_min % 60 )) $(( total_min / 60 ))
 }
 
-ARRL_TIME_12H=$(convert_time_12h "$ARRL_TIME")
-ARN_TIME_12H=$(convert_time_12h "$ARN_TIME")
-ARRL_CRON_DAY=$(day_to_cron "$ARRL_DAY")
-ARN_CRON_DAY=$(day_to_cron "$ARN_DAY")
+SLOT1_TIME_12H=$(convert_time_12h "$SLOT1_TIME")
+SLOT2_TIME_12H=$(convert_time_12h "$SLOT2_TIME")
+SLOT1_CRON_DAY=$(day_to_cron "$SLOT1_DAY")
+SLOT2_CRON_DAY=$(day_to_cron "$SLOT2_DAY")
 
-if [[ -z "$ARRL_CRON_DAY" ]]; then
-    echo -e "${YELLOW}WARNING: Unrecognized day '$ARRL_DAY', defaulting to Saturday.${NC}"
-    ARRL_DAY="Saturday"; ARRL_CRON_DAY=6
+if [[ -z "$SLOT1_CRON_DAY" ]]; then
+    echo -e "${YELLOW}WARNING: Unrecognized day '$SLOT1_DAY', defaulting to Saturday.${NC}"
+    SLOT1_DAY="Saturday"; SLOT1_CRON_DAY=6
 fi
-if [[ -z "$ARN_CRON_DAY" ]]; then
-    echo -e "${YELLOW}WARNING: Unrecognized day '$ARN_DAY', defaulting to Sunday.${NC}"
-    ARN_DAY="Sunday"; ARN_CRON_DAY=0
+if [[ -z "$SLOT2_CRON_DAY" ]]; then
+    echo -e "${YELLOW}WARNING: Unrecognized day '$SLOT2_DAY', defaulting to Sunday.${NC}"
+    SLOT2_DAY="Sunday"; SLOT2_CRON_DAY=0
 fi
 
 echo ""
@@ -231,53 +259,68 @@ if [[ "$UPDATING" == "false" ]]; then
     echo ""
     echo "--- Generating QST announcement text files ---"
 
-    cat > "$INSTALL_DIR/audio_files/arrl-qst-news.txt" << EOF
+    # Generate a QST txt file for a given news type using the supplied day/time.
+    generate_qst_txt() {
+        local type="$1" day="$2" time_12h="$3"
+        if [[ "$type" == "ARRL" ]]; then
+            cat > "$INSTALL_DIR/audio_files/arrl-qst-news.txt" << EOF
 QST QST QST
 
 Please stand by for a re-transmission of the most recent eh R R L Audio News.
 
-When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $ARRL_DAY morning at $ARRL_TIME_12H Local Time.
+When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time_12h Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
 The Re-Transmission of the eh R R L Audio News will begin momentarily.
 EOF
-
-    cat > "$INSTALL_DIR/audio_files/arn-qst-news.txt" << EOF
+            chmod 644 "$INSTALL_DIR/audio_files/arrl-qst-news.txt"
+            echo -e "${GREEN}arrl-qst-news.txt generated.${NC}"
+        else
+            cat > "$INSTALL_DIR/audio_files/arn-qst-news.txt" << EOF
 QST QST QST
 
 Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
 
-When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $ARN_DAY morning at $ARN_TIME_12H Local Time.
+When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time_12h Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
 The Re-Transmission of the Amateur Radio Newsline will begin momentarily.
 EOF
+            chmod 644 "$INSTALL_DIR/audio_files/arn-qst-news.txt"
+            echo -e "${GREEN}arn-qst-news.txt generated.${NC}"
+        fi
+    }
 
-    chmod 644 "$INSTALL_DIR/audio_files/arrl-qst-news.txt"
-    chmod 644 "$INSTALL_DIR/audio_files/arn-qst-news.txt"
-    echo -e "${GREEN}QST text files generated.${NC}"
+    # Generate QST audio for a given type using its installed txt file.
+    generate_qst_audio() {
+        local type="$1"
+        local base="${type,,}-qst-news"
+        local text
+        text=$(cat "$INSTALL_DIR/audio_files/${base}.txt")
+        if ! sudo -u asterisk asl-tts -n "$NODE" -t "$text" -f "$INSTALL_DIR/audio_files/$base"; then
+            echo -e "${YELLOW}WARNING: Failed to generate ${base}.ul via asl-tts.${NC}"
+            echo "         Run generate_audio.sh manually after installation."
+        else
+            echo -e "${GREEN}${base}.ul generated.${NC}"
+        fi
+    }
+
+    # Generate QST files for slot 1, then slot 2 (skip if slot 2 is same type as slot 1 —
+    # the QST file already reflects that type; user can edit and re-run generate_audio.sh).
+    generate_qst_txt "$SLOT1_TYPE" "$SLOT1_DAY" "$SLOT1_TIME_12H"
+    if [[ "$SLOT2_TYPE" != "$SLOT1_TYPE" ]]; then
+        generate_qst_txt "$SLOT2_TYPE" "$SLOT2_DAY" "$SLOT2_TIME_12H"
+    fi
 
     echo ""
     echo "--- Generating QST audio files with asl-tts ---"
     echo "    (This may take a moment...)"
 
-    ARRL_TEXT=$(cat "$INSTALL_DIR/audio_files/arrl-qst-news.txt")
-    ARN_TEXT=$(cat "$INSTALL_DIR/audio_files/arn-qst-news.txt")
-
-    if ! sudo -u asterisk asl-tts -n "$NODE" -t "$ARRL_TEXT" -f "$INSTALL_DIR/audio_files/arrl-qst-news"; then
-        echo -e "${YELLOW}WARNING: Failed to generate arrl-qst-news.ul via asl-tts.${NC}"
-        echo "         Run generate_audio.sh manually after installation."
-    else
-        echo -e "${GREEN}arrl-qst-news.ul generated.${NC}"
-    fi
-
-    if ! sudo -u asterisk asl-tts -n "$NODE" -t "$ARN_TEXT" -f "$INSTALL_DIR/audio_files/arn-qst-news"; then
-        echo -e "${YELLOW}WARNING: Failed to generate arn-qst-news.ul via asl-tts.${NC}"
-        echo "         Run generate_audio.sh manually after installation."
-    else
-        echo -e "${GREEN}arn-qst-news.ul generated.${NC}"
+    generate_qst_audio "$SLOT1_TYPE"
+    if [[ "$SLOT2_TYPE" != "$SLOT1_TYPE" ]]; then
+        generate_qst_audio "$SLOT2_TYPE"
     fi
 
 else
@@ -295,42 +338,20 @@ echo ""
 echo "--- Setting up cron jobs (asterisk user) ---"
 echo ""
 
-ARRL_CRON_START=$(compute_cron_start "$ARRL_TIME")
-ARN_CRON_START=$(compute_cron_start "$ARN_TIME")
+SLOT1_CRON_START=$(compute_cron_start "$SLOT1_TIME")
+SLOT2_CRON_START=$(compute_cron_start "$SLOT2_TIME")
 
 CRON_COMMENT="# ARRL/ARN Audio News"
-ARRL_CRON_JOB="$ARRL_CRON_START * * $ARRL_CRON_DAY $INSTALL_DIR/play_news.sh ARRL $ARRL_TIME $NODE L >/dev/null 2>&1"
-ARN_CRON_JOB="$ARN_CRON_START * * $ARN_CRON_DAY $INSTALL_DIR/play_news.sh ARN $ARN_TIME $NODE L >/dev/null 2>&1"
+SLOT1_CRON_JOB="$SLOT1_CRON_START * * $SLOT1_CRON_DAY $INSTALL_DIR/play_news.sh $SLOT1_TYPE $SLOT1_TIME $NODE L >/dev/null 2>&1"
+SLOT2_CRON_JOB="$SLOT2_CRON_START * * $SLOT2_CRON_DAY $INSTALL_DIR/play_news.sh $SLOT2_TYPE $SLOT2_TIME $NODE L >/dev/null 2>&1"
 
-CURRENT_CRON=$(crontab -u asterisk -l 2>/dev/null)
-
-if echo "$CURRENT_CRON" | grep -q "play_news.sh"; then
-    # Entry exists — update the comment and both cron lines in-place
-    NEW_CRON=$(echo "$CURRENT_CRON" | awk \
-        -v comment="$CRON_COMMENT" \
-        -v arrl_job="$ARRL_CRON_JOB" \
-        -v arn_job="$ARN_CRON_JOB" '
-        { lines[NR] = $0 }
-        END {
-            for (i = 1; i <= NR; i++) {
-                if (lines[i] ~ /play_news\.sh ARRL/) {
-                    if (i > 1 && lines[i-1] ~ /ARRL|ARN|[Aa][Rr].*[Nn]ews/) {
-                        lines[i-1] = comment
-                    }
-                    lines[i] = arrl_job
-                } else if (lines[i] ~ /play_news\.sh ARN/) {
-                    lines[i] = arn_job
-                }
-            }
-            for (i = 1; i <= NR; i++) print lines[i]
-        }')
-    echo "$NEW_CRON" | crontab -u asterisk -
-    echo -e "${GREEN}Cron jobs updated for asterisk user.${NC}"
-else
-    # No existing entry — append blank line, comment, and both cron lines
-    (crontab -u asterisk -l 2>/dev/null; echo ""; echo "$CRON_COMMENT"; echo "$ARRL_CRON_JOB"; echo "$ARN_CRON_JOB") | crontab -u asterisk -
-    echo -e "${GREEN}Cron jobs added for asterisk user.${NC}"
-fi
+# Remove any existing play_news.sh lines (and their comment), then add the two slots fresh.
+(crontab -u asterisk -l 2>/dev/null \
+    | grep -v "play_news\.sh" \
+    | grep -v "# ARRL/ARN Audio News"; \
+    echo ""; echo "$CRON_COMMENT"; echo "$SLOT1_CRON_JOB"; echo "$SLOT2_CRON_JOB") \
+    | crontab -u asterisk -
+echo -e "${GREEN}Cron jobs configured for asterisk user.${NC}"
 
 echo ""
 echo "=============================================="
@@ -345,8 +366,8 @@ echo "Audio files:        $INSTALL_DIR/audio_files/"
 echo "TTS audio files:    $INSTALL_DIR/audio_files/tts/"
 echo ""
 echo "Cron schedule (asterisk user):"
-echo "  ARRL news: ${ARRL_DAY}s at $ARRL_TIME  (cron starts 30 min early)"
-echo "  ARN news:  ${ARN_DAY}s  at $ARN_TIME  (cron starts 30 min early)"
+echo "  Slot 1: $SLOT1_TYPE  ${SLOT1_DAY}s at $SLOT1_TIME  (cron starts 30 min early)"
+echo "  Slot 2: $SLOT2_TYPE  ${SLOT2_DAY}s at $SLOT2_TIME  (cron starts 30 min early)"
 echo ""
 echo "Configuration file:"
 echo "  $INSTALL_DIR/ar-news.conf"
