@@ -1,65 +1,40 @@
 #!/bin/bash
-
-# This script is based on the playnews script that was originally written by Doug Crompton
-# for HamVOIP. It has been completely re-written to work by connecting to the ARRL/ARN news nodes
-# for playback rather than downloading the audio file and breaking it up on the local device. 
-# This allows the repeater breaks for ID at the proper times during the playback, instead of 
-# breaking at odd times.
-
-# This script can be used to play either the ARRL Audio News or the Amatuer Radio Newsline.
-# This script will connect to node 516229 (AllStar ARRL News) or Echolink node 6397 (ARN News) 
-# in Monitor Only mode to play the news.
-# If scheduling to play via CRON, it includes voice announcements 10 and 5 minutes
-# before the scheduled play time.
-
-# WARNING - This script can be configured for global playback! 
-# DO NOT run this on a multi-node connected circuit without consideration. 
-# Change MODE to localplay for strictly local node play.
+# play_news.sh - Play ARRL Audio News or Amateur Radio Newsline on an ASL3 node.
+# Copyright (c) 2026 Larry K. Aycock (N6LKA)
+# https://github.com/N6LKA/allstar-ar-news
 #
-# This code is written to work on the hamvoip.org BBB/RPi2 Allstar releases
-# and ASL3.
-# All required packages are pre-installed on those systems.
-# 
-# You can run this script from a cron job or from the command line at least
-# 15 minutes before the defined run time (TIME value) but it can be scheduled
-# anytime within 24 hours prior to the run time.
+# Based on the original playnews script by Doug Crompton (HamVOIP).
+# Rewritten to connect directly to the AllStar/Echolink news nodes in Monitor
+# Only mode, allowing the repeater to break for proper IDs during playback.
 #
-# This can be used in a CRON command to schedule the ARRL News or ARN to play.
-# CRON Example:
-#  
-# The below example will play the ARRL Audio News every Saturday at 9:00 PM 
-# Actual playtime set by defined comand line TIME parameter.
-# If Playtime is 9PM (2100) this would send announcements at 8:50 and 8:55 PM. 
+# Usage: play_news.sh ARRL|ARN HH:MM|NOW <NodeNumber> [L|G]
 #
-# Start a cron job every Saturday at 8:30 PM to play news at 9:00 PM the same day
-# and play ARRL news on node 501260, Locally
+#   ARRL|ARN      - News source: ARRL Audio News or Amateur Radio Newsline
+#   HH:MM|NOW     - Scheduled play time in 24-hour format, or NOW for immediate start
+#   <NodeNumber>  - Your ASL3 node number
+#   L|G           - L = local play only, G = global (all connected nodes). Defaults to L.
 #
-	# Play ARRL Audio News on Saturday at 9:00 PM local time on node 501260, - Schedule script at 8:30 PM
-	# 30 20 * * 6 /etc/asterisk/scripts/ar-news/play_news.sh ARRL 21:00 501260 L >/dev/null 2>&1
-
-# The audio files ARRLstart5, ARRLstart10, ARRLstart, ARRLstop
-# and ARNstart, ARNstart10, ARNstart, ARNstop
-# are supplied but could be customized for your needs. The audio
-# files must be in the directory defined by VOICEDIR
+# WARNING: Global mode (G) will play over all connected nodes.
+# Use Local mode (L) unless you specifically intend global playback.
 #
-# ARRLstart10 or ARNstart10   - voice message at ten minutes before start
-# ARRLstart5 or ARNstart5     - voice message at five minutes before start
-# ARRLstart or ARNstart       - voice message at start of play
-# ARRLstop or ARNstop         - voice message at end of play
-
-#	- Requires that all parameters be entered
-#     except mode which defualts to global
-#   - Time can be set to "NOW" for immediate start
+# When a scheduled time is given, the script plays 10-minute and 5-minute
+# pre-announcements, then connects to the news node at the scheduled time.
+# The script must be started at least 15 minutes before the play time,
+# and can be scheduled up to 24 hours in advance.
 #
-#   Usage: play_news.sh ARRL|ARN 24hTime|NOW NODE# L|G
+# DO NOT use NOW in a cron job.
 #
-#   Options:
-#		ARRL or ARN for type of news
-#		Specific 24 hour time or "NOW"
-#		Node number to play news on, and
-#   	Local "L" or Global "G" play mode
+# Cron example - play ARRL news every Saturday at 9:00 PM, start cron at 8:30 PM:
+#   30 20 * * 6 /etc/asterisk/scripts/ar-news/play_news.sh ARRL 21:00 <NodeNumber> L >/dev/null 2>&1
 #
-#   DO NOT use the the "NOW" time parameter in a cron !!!
+# Audio announcement files (in VOICEDIR, configured in ar-news.conf):
+#   ARRLstart10.ul   / ARNstart10.ul    - 10-minute pre-announcement
+#   ARRLstart5.ul    / ARNstart5.ul     - 5-minute pre-announcement
+#   ARRLstart.ul     / ARNstart.ul      - News start announcement
+#   ARRLstop.ul      / ARNstop.ul       - News end announcement
+#   ARRL-QST-NEWS.ul / ARN-QST-NEWS.ul  - QST announcement played before connecting to news node
+#
+# All user configuration is in ar-news.conf in the same directory as this script.
 
 # ===== Load user configuration =====
 
@@ -157,8 +132,8 @@ fi
 
 # Set Variables for playback mode local/global
 if [ -z $4 ]
-	then 
-		MODE="playback"
+	then
+		MODE="localplay"
 	elif
 		[ "${4^^}" == "L" ]
 			then

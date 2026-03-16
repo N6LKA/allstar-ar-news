@@ -1,12 +1,20 @@
 #!/bin/bash
-# Cancels playback of ARRL/ARN news.
-# Usage: cancel_news.sh <node_number>
-#
-# This script cancels the play_news.sh script written by Larry Aycock, N6LKA,
-# as well as the legacy playnews script by Doug Crompton.
-# Intended to be called via a DTMF command macro to interrupt news playback.
-#
+# cancel_news.sh - Emergency cancellation of ARRL/ARN news playback on an ASL3 node.
 # Copyright (c) 2026 Larry K. Aycock (N6LKA)
+# https://github.com/N6LKA/allstar-ar-news
+#
+# Usage: cancel_news.sh <NodeNumber>
+#
+# Designed to be triggered by a DTMF macro for immediate cancellation during
+# news playback. This script will:
+#   1. Disconnect the ARRL and ARN news nodes
+#   2. Kill the play_news.sh process
+#   3. Play a "cancelled" announcement
+#   4. Reconnect any previously linked nodes
+#   5. Re-enable the link activity timer (if configured in ar-news.conf)
+#   6. Restore normal repeater telemetry
+#
+# All user configuration is in ar-news.conf in the same directory as this script.
 
 # ===== Load user configuration =====
 
