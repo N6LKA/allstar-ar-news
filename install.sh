@@ -32,15 +32,132 @@ else
     UPDATING=false
 fi
 
+# --- Check/install asl-tts dependency ---
+echo ""
+echo "--- Checking dependencies ---"
+if ! command -v asl-tts &>/dev/null; then
+    echo "asl-tts not found. Installing asl3-tts..."
+    if ! apt-get install -y asl3-tts; then
+        echo -e "${RED}ERROR: Failed to install asl3-tts. Install it manually and re-run.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}asl3-tts installed.${NC}"
+else
+    echo -e "${GREEN}asl-tts found.${NC}"
+fi
+
+# --- Collect user inputs ---
+echo ""
+echo "--- Configuration ---"
+echo ""
+
+while true; do
+    read -rp "Enter your ASL3 node number: " NODE
+    NODE=$(echo "$NODE" | tr -d ' ')
+    [[ "$NODE" =~ ^[0-9]+$ ]] && break
+    echo -e "${RED}Node number must be numeric.${NC}"
+done
+
+if [[ "$UPDATING" == "false" ]]; then
+    while true; do
+        read -rp "Enter your station callsign: " CALLSIGN
+        CALLSIGN=$(echo "$CALLSIGN" | tr -d ' ' | tr '[:lower:]' '[:upper:]')
+        [[ -n "$CALLSIGN" ]] && break
+        echo -e "${RED}Callsign is required.${NC}"
+    done
+
+    echo "Station type:"
+    echo "  1) Repeater"
+    echo "  2) Node"
+    while true; do
+        read -rp "Select [1-2, default: 1]: " STTYPE
+        STTYPE=${STTYPE:-1}
+        case "$STTYPE" in
+            1) STATIONTYPE="Repeater"; break ;;
+            2) STATIONTYPE="Node"; break ;;
+            *) echo -e "${RED}Enter 1 or 2.${NC}" ;;
+        esac
+    done
+fi
+
+read -rp "Enter ARRL news play time in 24h format HH:MM [default: 07:30]: " ARRL_TIME
+ARRL_TIME=${ARRL_TIME:-07:30}
+
+read -rp "Enter ARN news play time in 24h format HH:MM  [default: 07:30]: " ARN_TIME
+ARN_TIME=${ARN_TIME:-07:30}
+
+read -rp "Enter day of week for ARRL news [default: Saturday]: " ARRL_DAY
+ARRL_DAY=${ARRL_DAY:-Saturday}
+
+read -rp "Enter day of week for ARN news  [default: Sunday]: " ARN_DAY
+ARN_DAY=${ARN_DAY:-Sunday}
+
+# --- Helper: convert 24h time to 12h AM/PM ---
+convert_time_12h() {
+    local time24="$1"
+    local h="${time24%%:*}"
+    local m="${time24##*:}"
+    local h10=$((10#$h))
+    local ampm="AM"
+    if [ $h10 -eq 0 ]; then
+        h10=12
+    elif [ $h10 -eq 12 ]; then
+        ampm="PM"
+    elif [ $h10 -gt 12 ]; then
+        h10=$((h10 - 12))
+        ampm="PM"
+    fi
+    echo "${h10}:${m} ${ampm}"
+}
+
+# --- Helper: day name to cron day number ---
+day_to_cron() {
+    case "${1,,}" in
+        sunday)    echo 0 ;;
+        monday)    echo 1 ;;
+        tuesday)   echo 2 ;;
+        wednesday) echo 3 ;;
+        thursday)  echo 4 ;;
+        friday)    echo 5 ;;
+        saturday)  echo 6 ;;
+        *)         echo "" ;;
+    esac
+}
+
+# --- Helper: compute HH MM cron fields 30 minutes before a given HH:MM play time ---
+compute_cron_start() {
+    local playtime="$1"
+    local h="${playtime%%:*}"
+    local m="${playtime##*:}"
+    local total_min=$(( 10#$h * 60 + 10#$m - 30 ))
+    [[ $total_min -lt 0 ]] && total_min=$(( total_min + 1440 ))
+    printf "%02d %02d" $(( total_min % 60 )) $(( total_min / 60 ))
+}
+
+ARRL_TIME_12H=$(convert_time_12h "$ARRL_TIME")
+ARN_TIME_12H=$(convert_time_12h "$ARN_TIME")
+ARRL_CRON_DAY=$(day_to_cron "$ARRL_DAY")
+ARN_CRON_DAY=$(day_to_cron "$ARN_DAY")
+
+if [[ -z "$ARRL_CRON_DAY" ]]; then
+    echo -e "${YELLOW}WARNING: Unrecognized day '$ARRL_DAY', defaulting to Saturday.${NC}"
+    ARRL_DAY="Saturday"; ARRL_CRON_DAY=6
+fi
+if [[ -z "$ARN_CRON_DAY" ]]; then
+    echo -e "${YELLOW}WARNING: Unrecognized day '$ARN_DAY', defaulting to Sunday.${NC}"
+    ARN_DAY="Sunday"; ARN_CRON_DAY=0
+fi
+
 echo ""
 echo "--- Downloading files ---"
 
 # --- Create install directories ---
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR/audio_files"
+mkdir -p "$INSTALL_DIR/audio_files/tts"
 
 # --- Download scripts ---
-for script in play_news.sh cancel_news.sh; do
+for script in play_news.sh cancel_news.sh generate_audio.sh test_audio.sh; do
     echo "Downloading $script..."
     curl -fsSL "$REPO/$script" -o "$INSTALL_DIR/$script"
     if [[ $? -ne 0 ]]; then
@@ -70,11 +187,10 @@ else
     chmod 644 "$INSTALL_DIR/ar-news.conf"
 fi
 
-# --- Download audio files ---
+# --- Download audio files (non-QST only; QST files are generated below) ---
 AUDIO_FILES=(
     ARRLstart.ul ARRLstart10.ul ARRLstart5.ul ARRLstop.ul
     ARNstart.ul  ARNstart10.ul  ARNstart5.ul  ARNstop.ul
-    arrl-qst-news.ul arn-qst-news.ul
     silence1.ul silence2.ul silence3.ul
 )
 for f in "${AUDIO_FILES[@]}"; do
@@ -87,11 +203,10 @@ for f in "${AUDIO_FILES[@]}"; do
     chmod 644 "$INSTALL_DIR/audio_files/$f"
 done
 
-# --- Download text transcript files ---
+# --- Download text transcript files (non-QST; QST .txt files are generated below) ---
 TEXT_FILES=(
-    ARRLstart ARRLstart10 ARRLstart5 ARRLstop
-    ARNstart  ARNstart10  ARNstart5  ARNstop
-    arrl-qst-news.txt arn-qst-news.txt
+    ARRLstart.txt ARRLstart10.txt ARRLstart5.txt ARRLstop.txt
+    ARNstart.txt  ARNstart10.txt  ARNstart5.txt  ARNstop.txt
 )
 for f in "${TEXT_FILES[@]}"; do
     echo "Downloading $f..."
@@ -103,8 +218,76 @@ for f in "${TEXT_FILES[@]}"; do
     chmod 644 "$INSTALL_DIR/audio_files/$f"
 done
 
+# --- Fresh install: update ar-news.conf with user values and generate QST files ---
+if [[ "$UPDATING" == "false" ]]; then
+
+    echo ""
+    echo "--- Configuring ar-news.conf ---"
+    sed -i "s/^LOCALNODE=.*/LOCALNODE=\"$NODE\"/" "$INSTALL_DIR/ar-news.conf"
+    sed -i "s/^CALLSIGN=.*/CALLSIGN=\"$CALLSIGN\"/" "$INSTALL_DIR/ar-news.conf"
+    sed -i "s/^STATIONTYPE=.*/STATIONTYPE=\"$STATIONTYPE\"/" "$INSTALL_DIR/ar-news.conf"
+    echo -e "${GREEN}ar-news.conf updated.${NC}"
+
+    echo ""
+    echo "--- Generating QST announcement text files ---"
+
+    cat > "$INSTALL_DIR/audio_files/arrl-qst-news.txt" << EOF
+QST QST QST
+
+Please stand by for a re-transmission of the most recent eh R R L Audio News.
+
+When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $ARRL_DAY morning at $ARRL_TIME_12H Local Time.
+
+If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
+
+The Re-Transmission of the eh R R L Audio News will begin momentarily.
+EOF
+
+    cat > "$INSTALL_DIR/audio_files/arn-qst-news.txt" << EOF
+QST QST QST
+
+Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
+
+When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $ARN_DAY morning at $ARN_TIME_12H Local Time.
+
+If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
+
+The Re-Transmission of the Amateur Radio Newsline will begin momentarily.
+EOF
+
+    chmod 644 "$INSTALL_DIR/audio_files/arrl-qst-news.txt"
+    chmod 644 "$INSTALL_DIR/audio_files/arn-qst-news.txt"
+    echo -e "${GREEN}QST text files generated.${NC}"
+
+    echo ""
+    echo "--- Generating QST audio files with asl-tts ---"
+    echo "    (This may take a moment...)"
+
+    ARRL_TEXT=$(cat "$INSTALL_DIR/audio_files/arrl-qst-news.txt")
+    ARN_TEXT=$(cat "$INSTALL_DIR/audio_files/arn-qst-news.txt")
+
+    if ! sudo -u asterisk asl-tts -n "$NODE" -t "$ARRL_TEXT" -f "$INSTALL_DIR/audio_files/arrl-qst-news"; then
+        echo -e "${YELLOW}WARNING: Failed to generate arrl-qst-news.ul via asl-tts.${NC}"
+        echo "         Run generate_audio.sh manually after installation."
+    else
+        echo -e "${GREEN}arrl-qst-news.ul generated.${NC}"
+    fi
+
+    if ! sudo -u asterisk asl-tts -n "$NODE" -t "$ARN_TEXT" -f "$INSTALL_DIR/audio_files/arn-qst-news"; then
+        echo -e "${YELLOW}WARNING: Failed to generate arn-qst-news.ul via asl-tts.${NC}"
+        echo "         Run generate_audio.sh manually after installation."
+    else
+        echo -e "${GREEN}arn-qst-news.ul generated.${NC}"
+    fi
+
+else
+    echo ""
+    echo -e "${YELLOW}Update: QST files preserved. Run generate_audio.sh to regenerate them.${NC}"
+fi
+
 # --- Set ownership ---
 chown -R root:asterisk "$INSTALL_DIR"
+echo ""
 echo -e "${GREEN}Files installed to: $INSTALL_DIR${NC}"
 
 # --- Cron setup (asterisk user) ---
@@ -112,35 +295,12 @@ echo ""
 echo "--- Setting up cron jobs (asterisk user) ---"
 echo ""
 
-# Helper: compute HH MM cron fields 30 minutes before a given HH:MM play time
-compute_cron_start() {
-    local playtime="$1"
-    local h="${playtime%%:*}"
-    local m="${playtime##*:}"
-    local total_min=$(( 10#$h * 60 + 10#$m - 30 ))
-    [[ $total_min -lt 0 ]] && total_min=$(( total_min + 1440 ))
-    printf "%02d %02d" $(( total_min % 60 )) $(( total_min / 60 ))
-}
-
-while true; do
-    read -rp "Enter your ASL3 node number: " NODE
-    NODE=$(echo "$NODE" | tr -d ' ')
-    [[ -n "$NODE" ]] && break
-    echo -e "${RED}Node number is required.${NC}"
-done
-
-read -rp "Enter ARRL news play time in 24h format HH:MM [default: 07:30]: " ARRL_TIME
-ARRL_TIME=${ARRL_TIME:-07:30}
-
-read -rp "Enter ARN news play time in 24h format HH:MM  [default: 07:30]: " ARN_TIME
-ARN_TIME=${ARN_TIME:-07:30}
-
 ARRL_CRON_START=$(compute_cron_start "$ARRL_TIME")
 ARN_CRON_START=$(compute_cron_start "$ARN_TIME")
 
 CRON_COMMENT="# ARRL/ARN Audio News"
-ARRL_CRON_JOB="$ARRL_CRON_START * * 6 $INSTALL_DIR/play_news.sh ARRL $ARRL_TIME $NODE L >/dev/null 2>&1"
-ARN_CRON_JOB="$ARN_CRON_START * * 7 $INSTALL_DIR/play_news.sh ARN $ARN_TIME $NODE L >/dev/null 2>&1"
+ARRL_CRON_JOB="$ARRL_CRON_START * * $ARRL_CRON_DAY $INSTALL_DIR/play_news.sh ARRL $ARRL_TIME $NODE L >/dev/null 2>&1"
+ARN_CRON_JOB="$ARN_CRON_START * * $ARN_CRON_DAY $INSTALL_DIR/play_news.sh ARN $ARN_TIME $NODE L >/dev/null 2>&1"
 
 CURRENT_CRON=$(crontab -u asterisk -l 2>/dev/null)
 
@@ -182,10 +342,11 @@ fi
 echo ""
 echo "Install directory:  $INSTALL_DIR"
 echo "Audio files:        $INSTALL_DIR/audio_files/"
+echo "TTS audio files:    $INSTALL_DIR/audio_files/tts/"
 echo ""
 echo "Cron schedule (asterisk user):"
-echo "  ARRL news: Saturdays  at $ARRL_TIME  (cron starts 30 min early)"
-echo "  ARN news:  Sundays    at $ARN_TIME  (cron starts 30 min early)"
+echo "  ARRL news: ${ARRL_DAY}s at $ARRL_TIME  (cron starts 30 min early)"
+echo "  ARN news:  ${ARN_DAY}s  at $ARN_TIME  (cron starts 30 min early)"
 echo ""
 echo "Configuration file:"
 echo "  $INSTALL_DIR/ar-news.conf"
@@ -193,5 +354,7 @@ echo ""
 echo "Manual usage (run as root or asterisk):"
 echo "  $INSTALL_DIR/play_news.sh ARRL|ARN HH:MM|NOW <NodeNumber> L|G"
 echo "  $INSTALL_DIR/cancel_news.sh <NodeNumber>"
+echo "  $INSTALL_DIR/generate_audio.sh"
+echo "  $INSTALL_DIR/test_audio.sh <txtfile>"
 echo "=============================================="
 echo ""
