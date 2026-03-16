@@ -21,7 +21,7 @@ Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic 
 - `asterisk` — included with ASL3
 - `asl3-connection-log` — required for disconnect detection via `connectlog`
   - See: [https://github.com/N6LKA/asl3-connection-log](https://github.com/N6LKA/asl3-connection-log)
-- `asl3-link-activity-monitor` (optional) — if `LNKACTTIMER` is enabled in the script
+- `asl3-link-activity-monitor` (optional) — if `LNKACTTIMER` is enabled in `ar-news.conf`
   - See: [https://github.com/N6LKA/asl3-link-activity-monitor](https://github.com/N6LKA/asl3-link-activity-monitor)
 
 ---
@@ -35,9 +35,11 @@ bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/allstar-ar-news/main/i
 ```
 
 The installer will:
-- Download all scripts and audio files to `/etc/asterisk/scripts/ar-news/`
+- Download all scripts, `ar-news.conf`, and audio files to `/etc/asterisk/scripts/ar-news/`
 - Prompt for your node number and desired play times
 - Add or update cron entries in the **asterisk user's** crontab
+
+> **On updates:** `ar-news.conf` is not overwritten — your settings are preserved. A copy of the new default config is saved as `ar-news.conf.new` for comparison.
 
 ---
 
@@ -106,17 +108,19 @@ Pre-recorded announcement files are included and installed with the script. The 
 
 ## Configuration
 
-Key settings at the top of `play_news.sh`:
+All user settings are in **`ar-news.conf`**, located in the same directory as the scripts (`/etc/asterisk/scripts/ar-news/ar-news.conf`). Both `play_news.sh` and `cancel_news.sh` read from this file, so you only need to edit one place.
 
 | Variable | Default | Description |
 |---|---|---|
-| `VOICEDIR` | `/etc/asterisk/scripts/ar-news/` | Path to audio files |
+| `VOICEDIR` | `/etc/asterisk/scripts/ar-news` | Path to audio files |
 | `TMPDIR` | `/tmp` | Temporary file storage |
-| `LNKACTTIMER` | `1` | Set to `1` to manage link activity timer during playback, `0` to skip |
+| `LNKACTTIMER` | `1` | `1` = manage link activity timer during playback, `0` = leave it alone |
 | `LNKACTTYPE` | `monitor` | `monitor` = use asl3-link-activity-monitor; `native` = use ASL3 cop 46/45 |
 | `ARRLNEWSNODE` | `516229` | AllStar node for ARRL news |
 | `ARNNEWSNODE` | `3006397` | AllStar/Echolink node for ARN news |
 | `logfile` | `/var/log/asterisk/connectlog` | Connection log for disconnect detection |
+
+> **Do not edit the scripts directly for configuration** — all settings belong in `ar-news.conf`.
 
 ---
 
@@ -128,7 +132,7 @@ The `cancel_news.sh` script is designed to be triggered by a DTMF macro (e.g. `*
 /etc/asterisk/scripts/ar-news/cancel_news.sh <NodeNumber>
 ```
 
-It will disconnect the news nodes, kill the `play_news.sh` process, and restore normal repeater operation.
+It will disconnect the news nodes, kill the `play_news.sh` process, and restore normal repeater operation. The cancel script reads `ar-news.conf` to correctly re-enable the link activity timer using whatever `LNKACTTIMER` and `LNKACTTYPE` settings you have configured.
 
 ---
 
