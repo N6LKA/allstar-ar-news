@@ -27,12 +27,16 @@
 # Cron example - play ARRL news every Saturday at 9:00 PM, start cron at 8:30 PM:
 #   30 20 * * 6 /etc/asterisk/scripts/ar-news/play_news.sh ARRL 21:00 <NodeNumber> L >/dev/null 2>&1
 #
-# Audio announcement files (in VOICEDIR, configured in ar-news.conf):
+# Audio announcement files (configured via AUDIOMODE in ar-news.conf):
+#   AUDIOMODE=files  uses pre-recorded files in VOICEDIR/
+#   AUDIOMODE=tts    uses TTS-generated files in VOICEDIR/tts/
+#                    Run generate_audio.sh to create TTS files.
+#                    Missing TTS files are generated automatically on first run.
+#
 #   ARRLstart10.ul   / ARNstart10.ul    - 10-minute pre-announcement
 #   ARRLstart5.ul    / ARNstart5.ul     - 5-minute pre-announcement
-#   ARRLstart.ul     / ARNstart.ul      - News start announcement
 #   ARRLstop.ul      / ARNstop.ul       - News end announcement
-#   arrl-qst-news.ul / arn-qst-news.ul   - QST announcement played before connecting to news node
+#   arrl-qst-news.ul / arn-qst-news.ul  - QST announcement played before connecting
 #
 # All user configuration is in ar-news.conf in the same directory as this script.
 
@@ -53,6 +57,25 @@
 	source "$CONFIG_FILE"
 
 # ===== End configuration load =====
+
+# ===== Set audio playback directory =====
+
+	# Determine which audio directory to use based on AUDIOMODE.
+	if [ "$AUDIOMODE" == "tts" ]; then
+		PLAYVOICEDIR="$VOICEDIR/tts"
+		# If TTS directory is empty or missing, run generate_audio.sh first.
+		if [ ! -d "$PLAYVOICEDIR" ] || [ -z "$(ls -A "$PLAYVOICEDIR" 2>/dev/null)" ]; then
+			echo "TTS audio files not found. Running generate_audio.sh to generate them..."
+			if ! "$SCRIPT_DIR/generate_audio.sh"; then
+				echo "Error: Failed to generate TTS audio files. Check generate_audio.sh."
+				exit 1
+			fi
+		fi
+	else
+		PLAYVOICEDIR="$VOICEDIR"
+	fi
+
+# ===== End audio directory setup =====
 
 # Define a variable to keep track of elapsed time
 elapsed_time=0
@@ -156,11 +179,10 @@ if [ $MODE == "playback" ]
 fi
 
 # Verify the path to voice files is correct and files exist.
-if [ ! -f $VOICEDIR/${NEWSTYPE}start ] || [ ! -f $VOICEDIR/${NEWSTYPE}stop ]
-  then
-    echo "Error - play_news voice files not found."
-	echo "Check VOICEDIR in script and that the files exist."
-    exit 1
+if [ ! -f "$PLAYVOICEDIR/${NEWSTYPE}start.ul" ] || [ ! -f "$PLAYVOICEDIR/${NEWSTYPE}stop.ul" ]; then
+	echo "Error - play_news audio files not found in $PLAYVOICEDIR"
+	echo "Check VOICEDIR and AUDIOMODE in ar-news.conf."
+	exit 1
 fi
 
 # === Play News Announcements Sequence ===
@@ -180,14 +202,14 @@ if [ "${TIME^^}" != "NOW" ]
 		echo "Waiting to send 10 minute warning"
 		while [ "$(date +%H:%M)" != "$TIME10" ]; do sleep 1; done
 			# Start 10 minute message, add 3 second delay to beginning
-			cat $VOICEDIR/silence3.ul "$VOICEDIR/${NEWSTYPE}start10.ul" > $TMPDIR/news.ul
+			cat "$VOICEDIR/silence3.ul" "$PLAYVOICEDIR/${NEWSTYPE}start10.ul" > "$TMPDIR/news.ul"
 			/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/news"
 
 		# Wait and Send 5 minute announcement
 		echo "Waiting to send 5 minute warning"
 		while [ "$(date +%H:%M)" != "$TIME5" ]; do sleep 1; done
 			# Start 5 minute message, add 3 second delay to beginning
-			cat $VOICEDIR/silence3.ul "$VOICEDIR/${NEWSTYPE}start5.ul" > $TMPDIR/news.ul
+			cat "$VOICEDIR/silence3.ul" "$PLAYVOICEDIR/${NEWSTYPE}start5.ul" > "$TMPDIR/news.ul"
 			/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/news"
 
 		# Wait for start time
@@ -236,7 +258,7 @@ sleep 6
 	
 # Send QST Announcment
 echo "Playing QST Announcment"
-cat $VOICEDIR/silence1.ul "$VOICEDIR/${NEWSTYPE,,}-qst-news.ul" > $TMPDIR/QST.ul
+cat "$VOICEDIR/silence1.ul" "$PLAYVOICEDIR/${NEWSTYPE,,}-qst-news.ul" > "$TMPDIR/QST.ul"
 /usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/QST"
 
 sleep 35
@@ -294,7 +316,7 @@ echo "Enabling telemetry."
 
 # Send News Stop Announcement
 echo "Playing News Stop Announcement"
-/usr/sbin/asterisk -rx "rpt $MODE $NODE /$VOICEDIR/${NEWSTYPE}stop"
+/usr/sbin/asterisk -rx "rpt $MODE $NODE $PLAYVOICEDIR/${NEWSTYPE}stop"
 
 # Done
 exit 0

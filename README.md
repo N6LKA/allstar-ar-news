@@ -19,6 +19,8 @@ Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic 
 
 - ASL3 installed and configured
 - `asterisk` — included with ASL3
+- `asl3-tts` — required for QST announcement audio generation and optional TTS mode
+  - Installed automatically by the installer if not present
 - `asl3-connection-log` — required for disconnect detection via `connectlog`
   - See: [https://github.com/N6LKA/asl3-connection-log](https://github.com/N6LKA/asl3-connection-log)
 - `asl3-link-activity-monitor` (optional) — if `LNKACTTIMER` is enabled in `ar-news.conf`
@@ -35,12 +37,14 @@ bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/allstar-ar-news/main/i
 ```
 
 The installer will:
+- Check for `asl3-tts` and install it automatically if missing
+- Prompt for your node number, callsign, station type, and desired play times and days
 - Download all scripts and `ar-news.conf` to `/etc/asterisk/scripts/ar-news/`
 - Download audio and transcript files to `/etc/asterisk/scripts/ar-news/audio_files/`
-- Prompt for your node number and desired play times
+- Generate personalized QST announcement text and audio files using asl-tts
 - Add or update cron entries in the **asterisk user's** crontab
 
-> **On updates:** `ar-news.conf` is not overwritten — your settings are preserved. A copy of the new default config is saved as `ar-news.conf.new` for comparison.
+> **On updates:** `ar-news.conf` is not overwritten — your settings are preserved. A copy of the new default config is saved as `ar-news.conf.new` for comparison. QST files are not regenerated on update; run `generate_audio.sh` manually to refresh them.
 
 ---
 
@@ -57,6 +61,12 @@ Must be run as **root** or the **asterisk** user.
 
 # Cancel news during playback (emergency use)
 /etc/asterisk/scripts/ar-news/cancel_news.sh <NodeNumber>
+
+# Generate TTS audio files (run after editing .txt files or switching AUDIOMODE)
+/etc/asterisk/scripts/ar-news/generate_audio.sh
+
+# Test how a transcript file sounds before generating audio
+/etc/asterisk/scripts/ar-news/test_audio.sh /etc/asterisk/scripts/ar-news/audio_files/arrl-qst-news.txt
 ```
 
 ### Arguments
@@ -66,7 +76,7 @@ Must be run as **root** or the **asterisk** user.
 | `ARRL` or `ARN` | News source |
 | `HH:MM` or `NOW` | Scheduled play time (24h) or immediate start |
 | `<NodeNumber>` | Your ASL3 node number |
-| `L` or `G` | `L` = local play only, `G` = global (all connected nodes) |
+| `L` or `G` | `L` = local play only, `G` = global (all connected nodes). Defaults to `L`. |
 
 > ⚠️ **Do not use `NOW` in a cron job.**
 
@@ -81,7 +91,7 @@ Default schedule (customizable during install):
 ```
 # ARRL/ARN Audio News
 00 07 * * 6 /etc/asterisk/scripts/ar-news/play_news.sh ARRL 07:30 <NodeNumber> L >/dev/null 2>&1
-00 07 * * 7 /etc/asterisk/scripts/ar-news/play_news.sh ARN  07:30 <NodeNumber> L >/dev/null 2>&1
+00 07 * * 0 /etc/asterisk/scripts/ar-news/play_news.sh ARN  07:30 <NodeNumber> L >/dev/null 2>&1
 ```
 
 To modify times after install, edit the asterisk user's crontab:
@@ -94,7 +104,7 @@ sudo crontab -u asterisk -e
 
 ## Audio Files
 
-Pre-recorded announcement files are included and installed with the script. The extensionless files (e.g. `ARRLstart`, `ARNstop`) contain the text transcripts used to generate the corresponding `.ul` audio files.
+All audio and transcript files are installed to `audio_files/`. TTS-generated files are stored in `audio_files/tts/`.
 
 | File | Description |
 |---|---|
@@ -102,14 +112,15 @@ Pre-recorded announcement files are included and installed with the script. The 
 | `ARRLstart5.ul` / `ARNstart5.ul` | 5-minute pre-announcement |
 | `ARRLstart.ul` / `ARNstart.ul` | News start announcement |
 | `ARRLstop.ul` / `ARNstop.ul` | News end announcement |
-| `arrl-qst-news.ul` / `arn-qst-news.ul` | QST pre-announcement played before connecting |
+| `arrl-qst-news.ul` / `arn-qst-news.ul` | QST pre-announcement (generated during install) |
 | `silence1.ul`, `silence2.ul`, `silence3.ul` | Silence padding |
+| `*.txt` | Text transcripts for each announcement — edit and regenerate as needed |
 
 ---
 
 ## Configuration
 
-All user settings are in **`ar-news.conf`**, located in the same directory as the scripts (`/etc/asterisk/scripts/ar-news/ar-news.conf`). Both `play_news.sh` and `cancel_news.sh` read from this file, so you only need to edit one place.
+All user settings are in **`ar-news.conf`**, located in the same directory as the scripts (`/etc/asterisk/scripts/ar-news/ar-news.conf`). All scripts read from this file.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -120,8 +131,45 @@ All user settings are in **`ar-news.conf`**, located in the same directory as th
 | `ARRLNEWSNODE` | `516229` | AllStar node for ARRL news |
 | `ARNNEWSNODE` | `3006397` | AllStar/Echolink node for ARN news |
 | `logfile` | `/var/log/asterisk/connectlog` | Connection log for disconnect detection |
+| `LOCALNODE` | `501260` | Your node number, used by `generate_audio.sh` and `test_audio.sh` |
+| `CALLSIGN` | `W1ABC` | Your callsign, used in QST announcement text |
+| `STATIONTYPE` | `Repeater` | `Repeater` or `Node`, used in QST announcement text |
+| `AUDIOMODE` | `files` | `files` = use pre-recorded audio; `tts` = use TTS-generated audio |
 
 > **Do not edit the scripts directly for configuration** — all settings belong in `ar-news.conf`.
+
+---
+
+## TTS Audio Mode
+
+By default the script uses pre-recorded `.ul` audio files. Optionally, you can switch to TTS-generated audio using the `asl-tts` / piper TTS engine for a more modern-sounding voice.
+
+### Switching to TTS mode
+
+1. Set `AUDIOMODE="tts"` in `ar-news.conf`
+2. Run `generate_audio.sh` to generate TTS audio files into `audio_files/tts/`
+
+```bash
+sudo /etc/asterisk/scripts/ar-news/generate_audio.sh
+```
+
+TTS files are generated once and reused. If `AUDIOMODE=tts` is set but TTS files are missing, `play_news.sh` will run `generate_audio.sh` automatically before proceeding.
+
+### Updating announcement text
+
+All announcements are driven by `.txt` transcript files in `audio_files/`. Edit these to customize what is said, then run `generate_audio.sh` to rebuild the audio.
+
+### Testing announcements
+
+Use `test_audio.sh` to hear how a transcript sounds before committing to a full regeneration:
+
+```bash
+sudo /etc/asterisk/scripts/ar-news/test_audio.sh /etc/asterisk/scripts/ar-news/audio_files/arrl-qst-news.txt
+```
+
+The node used for playback is `LOCALNODE` from `ar-news.conf`.
+
+> **Note:** QST announcement audio is always written to both `audio_files/` and `audio_files/tts/` when `generate_audio.sh` runs, so QST announcements stay current regardless of which `AUDIOMODE` you use.
 
 ---
 
