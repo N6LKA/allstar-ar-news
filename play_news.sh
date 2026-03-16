@@ -32,7 +32,7 @@
 #   ARRLstart5.ul    / ARNstart5.ul     - 5-minute pre-announcement
 #   ARRLstart.ul     / ARNstart.ul      - News start announcement
 #   ARRLstop.ul      / ARNstop.ul       - News end announcement
-#   ARRL-QST-NEWS.ul / ARN-QST-NEWS.ul  - QST announcement played before connecting to news node
+#   arrl-qst-news.ul / arn-qst-news.ul   - QST announcement played before connecting to news node
 #
 # All user configuration is in ar-news.conf in the same directory as this script.
 
@@ -236,7 +236,7 @@ sleep 6
 	
 # Send QST Announcment
 echo "Playing QST Announcment"
-cat $VOICEDIR/silence1.ul "$VOICEDIR/${NEWSTYPE}-QST-NEWS.ul" > $TMPDIR/QST.ul
+cat $VOICEDIR/silence1.ul "$VOICEDIR/${NEWSTYPE,,}-qst-news.ul" > $TMPDIR/QST.ul
 /usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/QST"
 
 sleep 35
