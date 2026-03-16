@@ -35,8 +35,9 @@ fi
 echo ""
 echo "--- Downloading files ---"
 
-# --- Create install directory ---
+# --- Create install directories ---
 mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/audio_files"
 
 # --- Download scripts ---
 for script in play_news.sh cancel_news.sh; do
@@ -78,12 +79,12 @@ AUDIO_FILES=(
 )
 for f in "${AUDIO_FILES[@]}"; do
     echo "Downloading $f..."
-    curl -fsSL "$REPO/$f" -o "$INSTALL_DIR/$f"
+    curl -fsSL "$REPO/$f" -o "$INSTALL_DIR/audio_files/$f"
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}ERROR: Failed to download $f${NC}"
         exit 1
     fi
-    chmod 644 "$INSTALL_DIR/$f"
+    chmod 644 "$INSTALL_DIR/audio_files/$f"
 done
 
 # --- Download text transcript files ---
@@ -94,12 +95,12 @@ TEXT_FILES=(
 )
 for f in "${TEXT_FILES[@]}"; do
     echo "Downloading $f..."
-    curl -fsSL "$REPO/$f" -o "$INSTALL_DIR/$f"
+    curl -fsSL "$REPO/$f" -o "$INSTALL_DIR/audio_files/$f"
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}ERROR: Failed to download $f${NC}"
         exit 1
     fi
-    chmod 644 "$INSTALL_DIR/$f"
+    chmod 644 "$INSTALL_DIR/audio_files/$f"
 done
 
 # --- Set ownership ---
@@ -180,6 +181,7 @@ else
 fi
 echo ""
 echo "Install directory:  $INSTALL_DIR"
+echo "Audio files:        $INSTALL_DIR/audio_files/"
 echo ""
 echo "Cron schedule (asterisk user):"
 echo "  ARRL news: Saturdays  at $ARRL_TIME  (cron starts 30 min early)"

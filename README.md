@@ -35,7 +35,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/allstar-ar-news/main/i
 ```
 
 The installer will:
-- Download all scripts, `ar-news.conf`, and audio files to `/etc/asterisk/scripts/ar-news/`
+- Download all scripts and `ar-news.conf` to `/etc/asterisk/scripts/ar-news/`
+- Download audio and transcript files to `/etc/asterisk/scripts/ar-news/audio_files/`
 - Prompt for your node number and desired play times
 - Add or update cron entries in the **asterisk user's** crontab
 
@@ -112,7 +113,7 @@ All user settings are in **`ar-news.conf`**, located in the same directory as th
 
 | Variable | Default | Description |
 |---|---|---|
-| `VOICEDIR` | `/etc/asterisk/scripts/ar-news` | Path to audio files |
+| `VOICEDIR` | `/etc/asterisk/scripts/ar-news/audio_files` | Path to audio files |
 | `TMPDIR` | `/tmp` | Temporary file storage |
 | `LNKACTTIMER` | `1` | `1` = manage link activity timer during playback, `0` = leave it alone |
 | `LNKACTTYPE` | `monitor` | `monitor` = use asl3-link-activity-monitor; `native` = use ASL3 cop 46/45 |
