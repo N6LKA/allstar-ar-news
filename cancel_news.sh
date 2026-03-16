@@ -6,7 +6,7 @@
 # as well as the legacy playnews script by Doug Crompton.
 # Intended to be called via a DTMF command macro to interrupt news playback.
 #
-# Modified by N6LKA 2025-11-20 for ASL3
+# Copyright (c) 2026 Larry K. Aycock (N6LKA)
 
 # ===== Load user configuration =====
 
