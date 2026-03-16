@@ -131,10 +131,10 @@ All user settings are in **`ar-news.conf`**, located in the same directory as th
 | `ARRLNEWSNODE` | `516229` | AllStar node for ARRL news |
 | `ARNNEWSNODE` | `3006397` | AllStar/Echolink node for ARN news |
 | `logfile` | `/var/log/asterisk/connectlog` | Connection log for disconnect detection |
-| `LOCALNODE` | `501260` | Your node number, used by `generate_audio.sh` and `test_audio.sh` |
+| `LOCALNODE` | *(required)* | Your node number, used by `generate_audio.sh` and `test_audio.sh` |
 | `CALLSIGN` | `W1ABC` | Your callsign, used in QST announcement text |
 | `STATIONTYPE` | `Repeater` | `Repeater` or `Node`, used in QST announcement text |
-| `AUDIOMODE` | `files` | `files` = use pre-recorded audio; `tts` = use TTS-generated audio |
+| `AUDIOMODE` | `tts` | `files` = use pre-recorded audio; `tts` = use TTS-generated audio |
 
 > **Do not edit the scripts directly for configuration** — all settings belong in `ar-news.conf`.
 
