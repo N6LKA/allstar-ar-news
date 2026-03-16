@@ -142,18 +142,21 @@ All user settings are in **`ar-news.conf`**, located in the same directory as th
 
 ## TTS Audio Mode
 
-By default the script uses pre-recorded `.ul` audio files. Optionally, you can switch to TTS-generated audio using the `asl-tts` / piper TTS engine for a more modern-sounding voice.
+By default, the script uses TTS-generated `.ul` audio files produced by the `asl-tts` / piper TTS engine for a modern-sounding voice. Older pre-recorded `.ul` files are also included in `audio_files/` as a fallback — these are the original recordings and can be used by setting `AUDIOMODE="files"` in `ar-news.conf`.
 
-### Switching to TTS mode
+TTS files are generated once and stored in `audio_files/tts/`. If TTS files are missing when `play_news.sh` runs, it will call `generate_audio.sh` automatically before proceeding.
 
-1. Set `AUDIOMODE="tts"` in `ar-news.conf`
-2. Run `generate_audio.sh` to generate TTS audio files into `audio_files/tts/`
+To manually regenerate TTS audio (e.g. after editing transcript files):
 
 ```bash
 sudo /etc/asterisk/scripts/ar-news/generate_audio.sh
 ```
 
-TTS files are generated once and reused. If `AUDIOMODE=tts` is set but TTS files are missing, `play_news.sh` will run `generate_audio.sh` automatically before proceeding.
+### Switching to pre-recorded mode
+
+If you prefer to use the older pre-recorded audio files instead of TTS:
+
+1. Set `AUDIOMODE="files"` in `ar-news.conf`
 
 ### Updating announcement text
 
