@@ -42,9 +42,6 @@
 
 # ===== Load user configuration =====
 
-	# All user-configurable settings are in ar-news.conf in the same directory
-	# as this script. Edit that file to change settings.
-
 	SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 	CONFIG_FILE="$SCRIPT_DIR/ar-news.conf"
 
@@ -58,16 +55,29 @@
 
 # ===== End configuration load =====
 
+# ===== Logging setup =====
+
+	# newslog: write a timestamped entry to NEWSLOGFILE and also print to stdout.
+	newslog() {
+		local msg="$1"
+		local ts
+		ts=$(date '+%Y-%m-%d %H:%M:%S')
+		echo "[$ts] $msg"
+		if [[ -n "$NEWSLOGFILE" ]]; then
+			echo "[$ts] $msg" >> "$NEWSLOGFILE" 2>/dev/null
+		fi
+	}
+
+# ===== End logging setup =====
+
 # ===== Set audio playback directory =====
 
-	# Determine which audio directory to use based on AUDIOMODE.
 	if [ "$AUDIOMODE" == "tts" ]; then
 		PLAYVOICEDIR="$VOICEDIR/tts"
-		# If TTS directory is empty or missing, run generate_audio.sh first.
 		if [ ! -d "$PLAYVOICEDIR" ] || [ -z "$(ls -A "$PLAYVOICEDIR" 2>/dev/null)" ]; then
-			echo "TTS audio files not found. Running generate_audio.sh to generate them..."
+			newslog "TTS audio files not found. Running generate_audio.sh to generate them..."
 			if ! "$SCRIPT_DIR/generate_audio.sh"; then
-				echo "Error: Failed to generate TTS audio files. Check generate_audio.sh."
+				newslog "Error: Failed to generate TTS audio files. Check generate_audio.sh."
 				exit 1
 			fi
 		fi
@@ -77,10 +87,8 @@
 
 # ===== End audio directory setup =====
 
-# Define a variable to keep track of elapsed time
-elapsed_time=0
+# ===== Parse arguments =====
 
-# Define usage function
 function usage {
 	echo ""
 	echo "Usage: $0 ARRL|ARN 24hTime|NOW NODE# L|G"
@@ -94,229 +102,201 @@ function usage {
 	exit 1
 }
 
-# Parse command line arguments
 if [ "$1" == "--help" ]; then
 	usage
-	exit 0
-elif [ $# -ne 3 ] && [ $# -ne 4 ]; then
+fi
+
+if [ $# -ne 3 ] && [ $# -ne 4 ]; then
 	echo "Missing required variables"
 	usage
-	exit 1	
 fi
 
-# NEWSTYPE is either ARRL or ARN, Always required as parameter 1
-if [ -z "$1" ]
-	then
-		echo "No Play type given - ARN or ARRL"
-		 
-		exit 1
-	else
-		NEWSTYPE="${1^^}"
-		if [ "$NEWSTYPE" != "ARN" ] && [ "$NEWSTYPE" != "ARRL" ]
-			then 
-				echo "Play type must be ARRL or ARN"
-				usage
-				exit 1
-		fi
+# NEWSTYPE
+NEWSTYPE="${1^^}"
+if [ "$NEWSTYPE" != "ARN" ] && [ "$NEWSTYPE" != "ARRL" ]; then
+	echo "Play type must be ARRL or ARN"
+	usage
 fi
 
-# Set NEWSNODE variable based on NEWSTYPE.
-if [ "$NEWSTYPE" == "ARRL" ]; then 
+# Set NEWSNODE based on NEWSTYPE
+if [ "$NEWSTYPE" == "ARRL" ]; then
 	NEWSNODE=$ARRLNEWSNODE
 elif [ "$NEWSTYPE" == "ARN" ]; then
 	NEWSNODE=$ARNNEWSNODE
 fi
-echo "News type = $NEWSTYPE and News Node = $NEWSNODE"
+newslog "News type = $NEWSTYPE, News Node = $NEWSNODE"
 
-# Time to start - 24 hour time - required 2nd command line parameter
-# Time example 03:19 = 3:19 AM, 22:45 = 10:45 PM 
+# TIME
 if [ -z "${2}" ]; then
-    echo "No Time supplied - Enter 24 hour time to play as 00:00 - (7 PM = 19:00)"
+	echo "No Time supplied - Enter 24 hour time to play as 00:00 - (7 PM = 19:00)"
 	echo "or NOW for immediate play."
-    usage
-    exit 1
+	usage
 elif [ "${2^^}" != "NOW" ] && [[ ! "$2" =~ ^[0-9][0-9]:[0-9][0-9]$ ]]; then
-    echo "Invalid Time format - Enter 24 hour time to play as 00:00 - (7 PM = 19:00)"
+	echo "Invalid Time format - Enter 24 hour time to play as 00:00 - (7 PM = 19:00)"
 	echo "or NOW for immediate play."
-    usage
-    exit 1
+	usage
 fi
 TIME="$2"
 
-# Verify Node # to Control
-if [[ ! $3 =~ ^-?[0-9]+$ ]]
-	then
-		echo "Error - Node number required"
-		echo "${USAGE_MESSAGE}"
-		exit 1
-	 else
-		NODE=$3
+# NODE
+if [[ ! $3 =~ ^-?[0-9]+$ ]]; then
+	echo "Error - Node number required"
+	usage
+fi
+NODE=$3
+
+# MODE
+if [ -z "$4" ] || [ "${4^^}" == "L" ]; then
+	MODE="localplay"
+elif [ "${4^^}" == "G" ]; then
+	MODE="playback"
+else
+	echo "Wrong mode type - L for Local play, G for global play"
+	usage
 fi
 
-# Set Variables for playback mode local/global
-if [ -z $4 ]
-	then
-		MODE="localplay"
-	elif
-		[ "${4^^}" == "L" ]
-			then
-				MODE="localplay"
-	elif
-		[ "${4^^}" == "G" ]
-		then
-			MODE="playback"
-		else
-			echo "Wrong mode type - L for Local play, G or null for global play"
-			echo "${USAGE_MESSAGE}"
-    exit 1
+if [ "$MODE" == "playback" ]; then
+	MODETYPE="(global)"
+else
+	MODETYPE="(local)"
 fi
 
-if [ $MODE == "playback" ]
-	then
-		MODETYPE="(global)"
-	else
-		MODETYPE="(local)"
-fi
+# ===== End argument parsing =====
 
-# Verify the path to voice files is correct and files exist.
+# Verify audio files exist
 if [ ! -f "$PLAYVOICEDIR/${NEWSTYPE}start.ul" ] || [ ! -f "$PLAYVOICEDIR/${NEWSTYPE}stop.ul" ]; then
-	echo "Error - play_news audio files not found in $PLAYVOICEDIR"
-	echo "Check VOICEDIR and AUDIOMODE in ar-news.conf."
+	newslog "Error: play_news audio files not found in $PLAYVOICEDIR"
+	newslog "Check VOICEDIR and AUDIOMODE in ar-news.conf."
 	exit 1
 fi
 
-# === Play News Announcements Sequence ===
+# ===== Audio duration helper =====
 
-# If start time is not NOW, play 10-minute and 5-minute announcements before start time.
-if [ "${TIME^^}" != "NOW" ]
-	then
-		echo "$NEWSTYPE news will start at $TIME and use $MODE $MODETYPE mode on"
-		echo "node - $NODE  with 5 and 10 minute pre-announcements"
-	 
-		# Last warning time - 5 minutes before
-		TIME5=`date --date "$TIME now 5 minutes ago" +%H:%M`
-		# First warning time - 10 minutes before
-		TIME10=`date --date "$TIME now 10 minutes ago" +%H:%M`
+# Returns the estimated playback duration of a .ul file in seconds.
+# ulaw audio = 8000 bytes per second. Adds a 2-second buffer.
+audio_duration() {
+	local file="$1"
+	local size
+	size=$(stat -c%s "$file" 2>/dev/null || echo 0)
+	echo $(( size / 8000 + 2 ))
+}
 
-		# Wait and Send 10 minute announcement
-		echo "Waiting to send 10 minute warning"
-		while [ "$(date +%H:%M)" != "$TIME10" ]; do sleep 1; done
-			# Start 10 minute message, add 3 second delay to beginning
-			cat "$VOICEDIR/silence3.ul" "$PLAYVOICEDIR/${NEWSTYPE}start10.ul" > "$TMPDIR/news.ul"
-			/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/news"
+# ===== Pre-announcement sequence =====
 
-		# Wait and Send 5 minute announcement
-		echo "Waiting to send 5 minute warning"
-		while [ "$(date +%H:%M)" != "$TIME5" ]; do sleep 1; done
-			# Start 5 minute message, add 3 second delay to beginning
-			cat "$VOICEDIR/silence3.ul" "$PLAYVOICEDIR/${NEWSTYPE}start5.ul" > "$TMPDIR/news.ul"
-			/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/news"
+if [ "${TIME^^}" != "NOW" ]; then
+	newslog "$NEWSTYPE news scheduled at $TIME -- $MODE $MODETYPE on node $NODE"
 
-		# Wait for start time
-		echo "Waiting for start time"
-		while [ "$(date +%H:%M)" != "$TIME" ]; do sleep 1; done
+	TIME5=$(date --date "$TIME now 5 minutes ago" +%H:%M)
+	TIME10=$(date --date "$TIME now 10 minutes ago" +%H:%M)
 
-	else
+	newslog "Waiting to send 10-minute warning at $TIME10"
+	while [ "$(date +%H:%M)" != "$TIME10" ]; do sleep 1; done
+	cat "$VOICEDIR/silence3.ul" "$PLAYVOICEDIR/${NEWSTYPE}start10.ul" > "$TMPDIR/news.ul"
+	/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/news"
+	newslog "10-minute warning sent."
 
-		clear
-		echo "$NEWSTYPE news will start $TIME and use $MODE $MODETYPE mode on node - $NODE"
-		echo -n "Press any key to start news..."
-		read -n 1 
+	newslog "Waiting to send 5-minute warning at $TIME5"
+	while [ "$(date +%H:%M)" != "$TIME5" ]; do sleep 1; done
+	cat "$VOICEDIR/silence3.ul" "$PLAYVOICEDIR/${NEWSTYPE}start5.ul" > "$TMPDIR/news.ul"
+	/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/news"
+	newslog "5-minute warning sent."
+
+	newslog "Waiting for start time $TIME"
+	while [ "$(date +%H:%M)" != "$TIME" ]; do sleep 1; done
+
+else
+	newslog "$NEWSTYPE news starting NOW -- $MODE $MODETYPE on node $NODE"
 fi
 
-# === Play News Sequence ===
+# ===== Play News Sequence =====
 
-# Disable Local Telemetry Output
-echo "Disabling telemetry."
+newslog "Disabling telemetry."
 /usr/sbin/asterisk -rx "rpt cmd $NODE cop 34"
 
 # Disable Link Activity Timer
-if [ $LNKACTTIMER == "1" ]; then
-	echo "Disabling Link Activity Timer"
+if [ "$LNKACTTIMER" == "1" ]; then
+	newslog "Disabling Link Activity Timer"
 	if [ "$LNKACTTYPE" == "native" ]; then
-		# Native ASL3 link activity timer
 		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 46"
 	else
-		# asl3-link-activity-monitor by N6LKA
 		/usr/local/bin/lnkact disable
 	fi
 fi
 
-#If Mode = localplay, then Disconnect from other nodes.
-if [ "$MODE" == "localplay" ]
-	then
-		# Disconnect from All nodes
-		echo "Disconnecting node $NODE from All other nodes."
-		/usr/sbin/asterisk -rx "rpt cmd $NODE ilink 6"
+# Disconnect from other nodes in local mode
+if [ "$MODE" == "localplay" ]; then
+	newslog "Disconnecting node $NODE from all other nodes."
+	/usr/sbin/asterisk -rx "rpt cmd $NODE ilink 6"
 fi
 
 # Send Repeater ID
-echo "Sending Repeater ID"
+newslog "Sending Repeater ID"
 /usr/sbin/asterisk -rx "rpt fun $NODE *80"
-
 sleep 6
-	
-# Send QST Announcment
-echo "Playing QST Announcment"
+
+# Build and play QST announcement
+newslog "Playing QST announcement"
 cat "$VOICEDIR/silence1.ul" "$PLAYVOICEDIR/${NEWSTYPE,,}-qst-news.ul" > "$TMPDIR/QST.ul"
 /usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/QST"
 
-sleep 35
-		
-# Connect to node NEWSNODE to play News
-echo "Connecting $NODE to $NEWSNODE"
-/usr/sbin/asterisk -rx "rpt fun $NODE *2$NEWSNODE"
-	
+# Wait for QST audio to finish based on actual file size (ulaw = 8000 bytes/sec)
+QST_WAIT=$(audio_duration "$TMPDIR/QST.ul")
+newslog "Waiting ${QST_WAIT}s for QST announcement to finish."
+sleep "$QST_WAIT"
 
-# Loop to wait for the news node to disconnect
+# Connect to news node
+newslog "Connecting node $NODE to news node $NEWSNODE"
+/usr/sbin/asterisk -rx "rpt fun $NODE *2$NEWSNODE"
+
+# ===== Disconnect detection =====
+# Record the current line count of the log before connecting so we only
+# examine new entries. This prevents false matches on stale log lines.
+
+LOG_START_LINE=$(wc -l < "$logfile" 2>/dev/null || echo 0)
+elapsed_time=0
+
+newslog "Monitoring for disconnect from node $NEWSNODE (backup timer: 1500s)"
+
 while true; do
-    if tail -n 1 "$logfile" | grep -q "disconnected from $NEWSNODE"; then
-        echo "Node $NEWSNODE disconnected"
-        break
-    fi
-    sleep 1
-    ((elapsed_time++))
-    if [ $elapsed_time -gt 1500 ]; then
-        echo "Backup timer exceeded. Assuming news has finished."
-        break
-    fi
+	if tail -n +"$((LOG_START_LINE + 1))" "$logfile" 2>/dev/null \
+		| grep -q "disconnected from $NEWSNODE"; then
+		newslog "Node $NEWSNODE disconnected -- news finished."
+		break
+	fi
+	sleep 1
+	((elapsed_time++))
+	if [ $elapsed_time -gt 1500 ]; then
+		newslog "WARNING: Backup timer exceeded (1500s). Assuming news has finished."
+		break
+	fi
 done
 
-# Check if the news node disconnected or backup timer exceeded
-if [ $elapsed_time -le 1500 ]; then
-    echo "Node $NEWSNODE disconnected"
-else
-    echo "Backup timer exceeded. Assuming news has finished."
-fi
+# ===== Post-playback cleanup =====
 
-# Re-Enable Link Activity Timer
-if [ $LNKACTTIMER == "1" ]; then
-	echo "Enabling Link Activity Timer"
+# Re-enable Link Activity Timer
+if [ "$LNKACTTIMER" == "1" ]; then
+	newslog "Enabling Link Activity Timer"
 	if [ "$LNKACTTYPE" == "native" ]; then
-		# Native ASL3 link activity timer
 		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 45"
 	else
-		# asl3-link-activity-monitor by N6LKA
 		/usr/local/bin/lnkact enable
 	fi
 fi
 
-
-#If Mode = Localplay, then reconnect disconnected nodes.
-if [ "$MODE" == "localplay" ]; then	 
-    # Reconnect previously disconnected nodes
-    echo "Reconnecting previously disconnected nodes."
-    /usr/sbin/asterisk -rx "rpt cmd $NODE ilink 16"
-    sleep 1
+# Reconnect previously disconnected nodes
+if [ "$MODE" == "localplay" ]; then
+	newslog "Reconnecting previously disconnected nodes."
+	/usr/sbin/asterisk -rx "rpt cmd $NODE ilink 16"
+	sleep 1
 fi
 
-# Enable Local Telemetry Output
-echo "Enabling telemetry."
+# Re-enable telemetry
+newslog "Enabling telemetry."
 /usr/sbin/asterisk -rx "rpt cmd $NODE cop 35"
 
-# Send News Stop Announcement
-echo "Playing News Stop Announcement"
+# Play News Stop Announcement
+newslog "Playing News Stop announcement"
 /usr/sbin/asterisk -rx "rpt $MODE $NODE $PLAYVOICEDIR/${NEWSTYPE}stop"
 
-# Done
+newslog "$NEWSTYPE news playback complete."
 exit 0

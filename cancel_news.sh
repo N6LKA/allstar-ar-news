@@ -31,6 +31,20 @@ source "$CONFIG_FILE"
 
 # ===== End configuration load =====
 
+# ===== Logging setup =====
+
+newslog() {
+	local msg="$1"
+	local ts
+	ts=$(date '+%Y-%m-%d %H:%M:%S')
+	echo "[$ts] $msg"
+	if [[ -n "$NEWSLOGFILE" ]]; then
+		echo "[$ts] $msg" >> "$NEWSLOGFILE" 2>/dev/null
+	fi
+}
+
+# ===== End logging setup =====
+
 # Validate node number
 NODE=$1
 if ! [[ $NODE =~ ^[0-9]+$ ]]; then
@@ -39,58 +53,60 @@ if ! [[ $NODE =~ ^[0-9]+$ ]]; then
 	exit 1
 fi
 
+newslog "cancel_news.sh triggered on node $NODE"
+
 clear
 
 # Disable Local Telemetry Output
-echo "Disabling telemetry."
+newslog "Disabling telemetry."
 if ! /usr/sbin/asterisk -rx "rpt cmd $NODE cop 34"; then
-	echo "Error: Failed to disable telemetry"
+	newslog "Error: Failed to disable telemetry"
 	exit 1
 fi
 
 # Disconnect news nodes
-echo "Disconnecting node $ARRLNEWSNODE"
+newslog "Disconnecting node $ARRLNEWSNODE"
 if ! /usr/sbin/asterisk -rx "rpt fun $NODE *1$ARRLNEWSNODE"; then
-	echo "Error: Failed to disconnect node $ARRLNEWSNODE"
+	newslog "Error: Failed to disconnect node $ARRLNEWSNODE"
 	exit 1
 fi
 
 sleep 1
 
-echo "Disconnecting node $ARNNEWSNODE"
+newslog "Disconnecting node $ARNNEWSNODE"
 if ! /usr/sbin/asterisk -rx "rpt fun $NODE *1$ARNNEWSNODE"; then
-	echo "Error: Failed to disconnect node $ARNNEWSNODE"
+	newslog "Error: Failed to disconnect node $ARNNEWSNODE"
 	exit 1
 fi
 
 # Kill play_news script and clean up temp files
 if pgrep play_news > /dev/null; then
-	echo "Killing play_news process"
+	newslog "Killing play_news process"
 	pkill play_news
 	rm -f "$TMPDIR/news.ul" "$TMPDIR/QST.ul"
 	if ! /usr/sbin/asterisk -rx "rpt cmd $NODE cop 24"; then
-		echo "Error: Failed to run Asterisk command"
+		newslog "Error: Failed to run Asterisk command"
 		exit 1
 	fi
 else
-	echo "play_news process is not running"
+	newslog "play_news process is not running"
 fi
 
 sleep 2
 
 # Play Cancelled announcement
 if ! /usr/sbin/asterisk -rx "rpt localplay $NODE /usr/share/asterisk/sounds/en/cancelled"; then
-	echo "Error: Failed to play cancelled sound"
+	newslog "Error: Failed to play cancelled sound"
 	exit 1
 fi
 
-echo "News Cancelled!"
+newslog "News cancelled."
 sleep 3
 
 # Reconnect previously disconnected nodes
-echo "Reconnecting previously disconnected nodes."
+newslog "Reconnecting previously disconnected nodes."
 if ! /usr/sbin/asterisk -rx "rpt cmd $NODE ilink 16"; then
-	echo "Error: Failed to reconnect previously disconnected nodes"
+	newslog "Error: Failed to reconnect previously disconnected nodes"
 	exit 1
 fi
 
@@ -98,22 +114,20 @@ sleep 1
 
 # Re-Enable Link Activity Timer
 if [ "$LNKACTTIMER" == "1" ]; then
-	echo "Enabling Link Activity Timer"
+	newslog "Enabling Link Activity Timer"
 	if [ "$LNKACTTYPE" == "native" ]; then
-		# Native ASL3 link activity timer
 		/usr/sbin/asterisk -rx "rpt cmd $NODE cop 45"
 	else
-		# asl3-link-activity-monitor by N6LKA
 		/usr/local/bin/lnkact enable
 	fi
 fi
 
 # Enable Local Telemetry Output
-echo "Enabling telemetry."
+newslog "Enabling telemetry."
 if ! /usr/sbin/asterisk -rx "rpt cmd $NODE cop 35"; then
-	echo "Error: Failed to enable telemetry"
+	newslog "Error: Failed to enable telemetry"
 	exit 1
 fi
 
-# End
+newslog "cancel_news.sh complete."
 exit 0
