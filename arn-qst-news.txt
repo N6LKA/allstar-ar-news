@@ -2,7 +2,7 @@ QST QST QST
 
 Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
 
-When available, Amateur Radio Newsline is re-transmitted on this W1ABC Repeater every Sunday morning at 7:30 AM Local Time.
+When available, Amateur Radio Newsline is re-transmitted on this W1ABC Repeater every Sunday morning at 07:30 Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
