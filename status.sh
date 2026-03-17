@@ -5,7 +5,7 @@
 #
 # Usage: status.sh
 
-INSTALL_DIR="/etc/asterisk/scripts/ar-news"
+INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
 CONFIG_FILE="$INSTALL_DIR/ar-news.conf"
 
 echo ""
@@ -15,8 +15,8 @@ echo "=============================================="
 echo ""
 
 # --- Check installation ---
-if [[ ! -d "$INSTALL_DIR" ]]; then
-    echo "ERROR: allstar-ar-news is not installed ($INSTALL_DIR not found)."
+if [[ ! -f "$INSTALL_DIR/play_news.sh" ]]; then
+    echo "ERROR: allstar-ar-news does not appear to be installed ($INSTALL_DIR/play_news.sh not found)."
     echo ""
     exit 1
 fi
