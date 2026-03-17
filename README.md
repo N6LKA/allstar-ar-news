@@ -2,7 +2,7 @@
 
 A bash script to play the **ARRL Audio News** or **Amateur Radio Newsline (ARN)** on an [ASL3](https://allstarlink.org/) repeater node. Rather than downloading and playing a local audio file, the script connects to the live AllStar news node in Monitor Only mode — allowing the repeater to break for proper IDs during playback instead of cutting at arbitrary points.
 
-Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic link activity monitor management, and a cancel script for emergency use during playback.
+Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic link activity monitor management, playback logging, and a cancel script for emergency use during playback.
 
 ---
 
@@ -11,7 +11,9 @@ Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic 
 - **ARRL News** connects to AllStar node `516229`
 - **ARN News** connects to Echolink node `6397` (`3006397` in AllStar format)
 - The script waits for the news node to disconnect before cleaning up
-- A 20-minute backup timer prevents the script from hanging indefinitely
+- Disconnect is detected by monitoring the `asl3-connection-log` connection log — only new log entries written after connecting are checked, preventing false matches on old entries
+- A 25-minute (1500-second) backup timer prevents the script from hanging indefinitely if the log entry is missed
+- All activity is timestamped and logged to a log file in the install directory
 
 ---
 
@@ -37,11 +39,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/allstar-ar-news/main/i
 ```
 
 The installer will:
-- Check for `asl3-tts` and install it automatically if missing
-- Prompt for your node number, callsign, station type, and desired play times and days
+- Check for a newer version of allstar-ar-news and notify you if one is available
+- Check for and install `asl3-tts`, `asl3-link-activity-monitor`, and `asl3-connection-log` if missing
+- Prompt for your node number, callsign, and station type
+- Let you configure **one or more** scheduled news slots — each with its own news type, day, and time
 - Download all scripts and `ar-news.conf` to `/etc/asterisk/scripts/ar-news/`
 - Download audio and transcript files to `/etc/asterisk/scripts/ar-news/audio_files/`
-- Generate personalized QST announcement text and audio files using asl-tts
+- Generate personalized QST announcement text and audio files using `asl-tts`
 - Add or update cron entries in the **asterisk user's** crontab
 
 > **On updates:** `ar-news.conf` is not overwritten — your settings are preserved. A copy of the new default config is saved as `ar-news.conf.new` for comparison. QST files are not regenerated on update; run `generate_audio.sh` manually to refresh them.
@@ -67,6 +71,12 @@ Must be run as **root** or the **asterisk** user.
 
 # Test how a transcript file sounds before generating audio
 /etc/asterisk/scripts/ar-news/test_audio.sh /etc/asterisk/scripts/ar-news/audio_files/arrl-qst-news.txt
+
+# Show current playback status and upcoming schedule
+/etc/asterisk/scripts/ar-news/status.sh
+
+# Remove allstar-ar-news from the system
+sudo /etc/asterisk/scripts/ar-news/uninstall.sh
 ```
 
 ### Arguments
@@ -74,7 +84,7 @@ Must be run as **root** or the **asterisk** user.
 | Argument | Description |
 |---|---|
 | `ARRL` or `ARN` | News source |
-| `HH:MM` or `NOW` | Scheduled play time (24h) or immediate start |
+| `HH:MM` or `NOW` | Scheduled play time (24h format) or immediate start |
 | `<NodeNumber>` | Your ASL3 node number |
 | `L` or `G` | `L` = local play only, `G` = global (all connected nodes). Defaults to `L`. |
 
@@ -84,9 +94,9 @@ Must be run as **root** or the **asterisk** user.
 
 ## Cron Schedule
 
-The installer adds entries to the **asterisk user's** crontab. The cron starts the script 30 minutes before the play time to allow for pre-announcements.
+The installer adds entries to the **asterisk user's** crontab. You can configure any number of slots during installation — each with its own news type (ARRL or ARN), day of the week, and time. The cron job starts the script 30 minutes before the play time to allow for pre-announcements.
 
-Default schedule (customizable during install):
+Example with two slots:
 
 ```
 # ARRL/ARN Audio News
@@ -94,7 +104,7 @@ Default schedule (customizable during install):
 00 07 * * 0 /etc/asterisk/scripts/ar-news/play_news.sh ARN  07:30 <NodeNumber> L >/dev/null 2>&1
 ```
 
-To modify times after install, edit the asterisk user's crontab:
+To modify the schedule after install, edit the asterisk user's crontab directly, or re-run the installer:
 
 ```bash
 sudo crontab -u asterisk -e
@@ -130,8 +140,9 @@ All user settings are in **`ar-news.conf`**, located in the same directory as th
 | `LNKACTTYPE` | `monitor` | `monitor` = use asl3-link-activity-monitor; `native` = use ASL3 cop 46/45 |
 | `ARRLNEWSNODE` | `516229` | AllStar node for ARRL news |
 | `ARNNEWSNODE` | `3006397` | AllStar/Echolink node for ARN news |
-| `logfile` | `/var/log/asterisk/connectlog` | Connection log for disconnect detection |
-| `LOCALNODE` | *(required)* | Your node number. Required — set by the installer. Used by all scripts and the cron job. |
+| `logfile` | `/var/log/asterisk/connectlog` | Connection log used for disconnect detection |
+| `NEWSLOGFILE` | `/etc/asterisk/scripts/ar-news/ar-news.log` | Playback activity log |
+| `LOCALNODE` | *(required)* | Your node number — set by the installer |
 | `CALLSIGN` | `W1ABC` | Your callsign, used in QST announcement text |
 | `STATIONTYPE` | `Repeater` | `Repeater` or `Node`, used in QST announcement text |
 | `AUDIOMODE` | `tts` | `files` = use pre-recorded audio; `tts` = use TTS-generated audio |
@@ -151,6 +162,8 @@ To manually regenerate TTS audio (e.g. after editing transcript files):
 ```bash
 sudo /etc/asterisk/scripts/ar-news/generate_audio.sh
 ```
+
+The wait time between the QST announcement and connecting to the news node is calculated automatically from the actual audio file size (ulaw = 8000 bytes/second), so the timing adjusts correctly if you customize the QST text.
 
 ### Switching to pre-recorded mode
 
@@ -176,6 +189,20 @@ The node used for playback is `LOCALNODE` from `ar-news.conf`.
 
 ---
 
+## Playback Logging
+
+All playback activity is timestamped and written to the log file defined by `NEWSLOGFILE` in `ar-news.conf` (default: `/etc/asterisk/scripts/ar-news/ar-news.log`). This includes pre-announcement timing, QST playback, connect/disconnect events, timer expiry, and cancellations.
+
+Since `play_news.sh` runs from cron with output redirected to `/dev/null`, the log file is the primary way to verify that a scheduled broadcast ran correctly.
+
+To view recent activity:
+
+```bash
+tail -f /etc/asterisk/scripts/ar-news/ar-news.log
+```
+
+---
+
 ## Cancelling Playback
 
 The `cancel_news.sh` script is designed to be triggered by a DTMF macro (e.g. `*999`) for emergency cancellation during playback:
@@ -184,7 +211,34 @@ The `cancel_news.sh` script is designed to be triggered by a DTMF macro (e.g. `*
 /etc/asterisk/scripts/ar-news/cancel_news.sh <NodeNumber>
 ```
 
-It will disconnect the news nodes, kill the `play_news.sh` process, and restore normal repeater operation. The cancel script reads `ar-news.conf` to correctly re-enable the link activity timer using whatever `LNKACTTIMER` and `LNKACTTYPE` settings you have configured.
+It will disconnect the news nodes, kill the `play_news.sh` process, restore normal repeater operation, and log the cancellation. The cancel script reads `ar-news.conf` to correctly re-enable the link activity timer using whatever `LNKACTTIMER` and `LNKACTTYPE` settings you have configured.
+
+---
+
+## Status
+
+The `status.sh` script shows the current state of the system at a glance:
+
+```bash
+/etc/asterisk/scripts/ar-news/status.sh
+```
+
+It displays:
+- Whether `play_news.sh` is currently running (with PID and start time)
+- All scheduled broadcasts from the asterisk user's crontab
+- The last 10 entries from the playback log
+
+---
+
+## Uninstalling
+
+To completely remove allstar-ar-news:
+
+```bash
+sudo /etc/asterisk/scripts/ar-news/uninstall.sh
+```
+
+The uninstaller will remove the cron entries from the asterisk user's crontab, delete the install directory, and optionally remove the log file. It will ask for confirmation before taking any action.
 
 ---
 
