@@ -98,6 +98,19 @@ fi
 # Helper functions (defined before user input so they can be called in the loop)
 # =============================================================================
 
+# Return "morning", "afternoon", or "evening" for a given HH:MM time
+time_of_day() {
+    local hour="${1%%:*}"
+    hour=$((10#$hour))
+    if [[ $hour -ge 5 && $hour -lt 12 ]]; then
+        echo "morning"
+    elif [[ $hour -ge 12 && $hour -lt 18 ]]; then
+        echo "afternoon"
+    else
+        echo "evening"
+    fi
+}
+
 # Day name to cron day number
 day_to_cron() {
     case "${1,,}" in
@@ -130,9 +143,21 @@ echo ""
 echo "--- Configuration ---"
 echo ""
 
+# Pre-fill node number from existing config when updating
+_DEFAULT_NODE=""
+if [[ "$UPDATING" == "true" && -f "$INSTALL_DIR/ar-news.conf" ]]; then
+    _DEFAULT_NODE=$(grep '^LOCALNODE=' "$INSTALL_DIR/ar-news.conf" | head -1 | sed 's/LOCALNODE="\(.*\)"/\1/')
+fi
+
 while true; do
-    read -rp "Enter your ASL3 node number: " NODE
-    NODE=$(echo "$NODE" | tr -d ' ')
+    if [[ -n "$_DEFAULT_NODE" ]]; then
+        read -rp "Enter your ASL3 node number [default: $_DEFAULT_NODE]: " NODE
+        NODE=$(echo "$NODE" | tr -d ' ')
+        NODE="${NODE:-$_DEFAULT_NODE}"
+    else
+        read -rp "Enter your ASL3 node number: " NODE
+        NODE=$(echo "$NODE" | tr -d ' ')
+    fi
     [[ "$NODE" =~ ^[0-9]+$ ]] && break
     echo -e "${RED}Node number must be numeric.${NC}"
 done
@@ -326,13 +351,15 @@ if [[ "$UPDATING" == "false" ]]; then
     # Generate QST txt for a given type using the supplied day/time
     generate_qst_txt() {
         local type="$1" day="$2" time="$3"
+        local tod
+        tod=$(time_of_day "$time")
         if [[ "$type" == "ARRL" ]]; then
             cat > "$INSTALL_DIR/audio_files/arrl-qst-news.txt" << EOF
 QST QST QST
 
 Please stand by for a re-transmission of the most recent eh R R L Audio News.
 
-When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time Local Time.
+When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $day $tod at $time Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
@@ -346,7 +373,7 @@ QST QST QST
 
 Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
 
-When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time Local Time.
+When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $day $tod at $time Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
@@ -389,6 +416,10 @@ EOF
     done
 
 else
+    echo ""
+    echo "--- Updating node number in ar-news.conf ---"
+    sed -i "s/^LOCALNODE=.*/LOCALNODE=\"$NODE\"/" "$INSTALL_DIR/ar-news.conf"
+    echo -e "${GREEN}LOCALNODE updated to $NODE.${NC}"
     echo ""
     echo -e "${YELLOW}Update: QST files preserved. Run generate_audio.sh to regenerate them.${NC}"
 fi

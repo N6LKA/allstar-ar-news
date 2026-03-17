@@ -170,6 +170,12 @@ if [ ! -f "$PLAYVOICEDIR/${NEWSTYPE}start.ul" ] || [ ! -f "$PLAYVOICEDIR/${NEWST
 	exit 1
 fi
 
+if [ ! -f "$PLAYVOICEDIR/${NEWSTYPE,,}-qst-news.ul" ]; then
+	newslog "Error: QST audio file not found: $PLAYVOICEDIR/${NEWSTYPE,,}-qst-news.ul"
+	newslog "Run generate_audio.sh to regenerate QST audio files."
+	exit 1
+fi
+
 # ===== Audio duration helper =====
 
 # Returns the estimated playback duration of a .ul file in seconds.
