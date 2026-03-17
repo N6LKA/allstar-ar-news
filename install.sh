@@ -65,9 +65,11 @@ if ! dpkg -s asl3-connection-log &>/dev/null; then
     if apt-get install -y asl3-connection-log; then
         echo -e "${GREEN}asl3-connection-log installed.${NC}"
     else
-        echo -e "${YELLOW}WARNING: Could not install asl3-connection-log.${NC}"
-        echo "         Install it manually: https://github.com/N6LKA/asl3-connection-log"
-        echo "         play_news.sh requires it to detect when the news node disconnects."
+        echo -e "${RED}ERROR: Could not install asl3-connection-log.${NC}"
+        echo "       This package is required — play_news.sh depends on its log format"
+        echo "       to detect when the news node disconnects."
+        echo "       Install it manually: https://github.com/N6LKA/asl3-connection-log"
+        exit 1
     fi
 else
     echo -e "${GREEN}asl3-connection-log found.${NC}"
