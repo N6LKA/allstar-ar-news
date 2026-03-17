@@ -98,24 +98,6 @@ fi
 # Helper functions (defined before user input so they can be called in the loop)
 # =============================================================================
 
-# Convert 24h time to 12h AM/PM
-convert_time_12h() {
-    local time24="$1"
-    local h="${time24%%:*}"
-    local m="${time24##*:}"
-    local h10=$((10#$h))
-    local ampm="AM"
-    if [ $h10 -eq 0 ]; then
-        h10=12
-    elif [ $h10 -eq 12 ]; then
-        ampm="PM"
-    elif [ $h10 -gt 12 ]; then
-        h10=$((h10 - 12))
-        ampm="PM"
-    fi
-    echo "${h10}:${m} ${ampm}"
-}
-
 # Day name to cron day number
 day_to_cron() {
     case "${1,,}" in
@@ -186,7 +168,6 @@ echo ""
 declare -a SLOT_TYPES=()
 declare -a SLOT_DAYS=()
 declare -a SLOT_TIMES=()
-declare -a SLOT_TIMES_12H=()
 declare -a SLOT_CRON_DAYS=()
 
 # Suggested default days for the first two slots
@@ -244,15 +225,12 @@ while true; do
         echo -e "${RED}  Invalid time format. Use HH:MM (e.g. 07:30).${NC}"
     done
 
-    _TIME_12H=$(convert_time_12h "$_TIME")
-
     SLOT_TYPES+=("$_TYPE")
     SLOT_DAYS+=("$_DAY")
     SLOT_TIMES+=("$_TIME")
-    SLOT_TIMES_12H+=("$_TIME_12H")
     SLOT_CRON_DAYS+=("$_CRON_DAY")
 
-    echo -e "  ${GREEN}Slot $slot_num added: $_TYPE  ${_DAY}s at $_TIME_12H${NC}"
+    echo -e "  ${GREEN}Slot $slot_num added: $_TYPE  ${_DAY}s at $_TIME${NC}"
 
     ((slot_num++))
 done
@@ -347,14 +325,14 @@ if [[ "$UPDATING" == "false" ]]; then
 
     # Generate QST txt for a given type using the supplied day/time
     generate_qst_txt() {
-        local type="$1" day="$2" time_12h="$3"
+        local type="$1" day="$2" time="$3"
         if [[ "$type" == "ARRL" ]]; then
             cat > "$INSTALL_DIR/audio_files/arrl-qst-news.txt" << EOF
 QST QST QST
 
 Please stand by for a re-transmission of the most recent eh R R L Audio News.
 
-When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time_12h Local Time.
+When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
@@ -368,7 +346,7 @@ QST QST QST
 
 Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
 
-When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time_12h Local Time.
+When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $day morning at $time Local Time.
 
 If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
 
@@ -398,7 +376,7 @@ EOF
         _TYPE="${SLOT_TYPES[$i]}"
         if [[ -z "${_SEEN_TYPES[$_TYPE]+x}" ]]; then
             _SEEN_TYPES[$_TYPE]=1
-            generate_qst_txt "$_TYPE" "${SLOT_DAYS[$i]}" "${SLOT_TIMES_12H[$i]}"
+            generate_qst_txt "$_TYPE" "${SLOT_DAYS[$i]}" "${SLOT_TIMES[$i]}"
         fi
     done
 
