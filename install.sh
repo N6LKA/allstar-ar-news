@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.2"
+VERSION="1.1.3"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -365,7 +365,7 @@ Please stand by for a re-transmission of the most recent eh R R L Audio News.
 
 When available, the eh R R L Audio News is re-transmitted on this $CALLSIGN $STATIONTYPE every $day $tod at $time Local Time.
 
-If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
+If you have Emergency or Priority traffic during an automated playback, use asterisk 9 9 9 to cancel it.
 
 The Re-Transmission of the eh R R L Audio News will begin momentarily.
 EOF
@@ -379,7 +379,7 @@ Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
 
 When available, Amateur Radio Newsline is re-transmitted on this $CALLSIGN $STATIONTYPE every $day $tod at $time Local Time.
 
-If you have Emergency or Priority traffic during an automated playback, use * 9 9 9 to cancel it.
+If you have Emergency or Priority traffic during an automated playback, use asterisk 9 9 9 to cancel it.
 
 The Re-Transmission of the Amateur Radio Newsline will begin momentarily.
 EOF
