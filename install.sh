@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.6"
+VERSION="1.1.7"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -26,30 +26,28 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-# --- Version check ---
-echo "--- Checking for updates ---"
-REMOTE_VERSION=$(curl -fsSL "$REPO/version.txt" 2>/dev/null | tr -d '[:space:]')
-if [[ -n "$REMOTE_VERSION" ]]; then
-    if [[ "$REMOTE_VERSION" != "$VERSION" ]]; then
-        echo -e "${YELLOW}NOTE: A newer version ($REMOTE_VERSION) is available.${NC}"
-        echo "      You are running version $VERSION."
-        echo "      Re-download install.sh from the repo to get the latest version."
-        echo ""
+# --- Detect existing install and show version info ---
+INSTALLED_VERSION=""
+if [[ -f "$INSTALL_DIR/.version" ]]; then
+    INSTALLED_VERSION=$(cat "$INSTALL_DIR/.version" | tr -d '[:space:]')
+fi
+
+if [[ -f "$INSTALL_DIR/play_news.sh" ]]; then
+    UPDATING=true
+    if [[ -n "$INSTALLED_VERSION" && "$INSTALLED_VERSION" != "$VERSION" ]]; then
+        echo -e "${YELLOW}Existing installation detected.${NC}"
+        echo -e "Updating from version ${YELLOW}$INSTALLED_VERSION${NC} to version ${GREEN}$VERSION${NC}."
+    elif [[ -n "$INSTALLED_VERSION" && "$INSTALLED_VERSION" == "$VERSION" ]]; then
+        echo -e "${YELLOW}Existing installation detected.${NC}"
+        echo -e "Already on version ${GREEN}$VERSION${NC}. Scripts will be refreshed."
     else
-        echo -e "${GREEN}You are running the latest version ($VERSION).${NC}"
+        echo -e "${YELLOW}Existing installation detected. Updating scripts and audio files...${NC}"
     fi
 else
-    echo -e "${YELLOW}WARNING: Could not check for updates (no network or repo unreachable).${NC}"
+    UPDATING=false
+    echo "New installation (version $VERSION)."
 fi
 echo ""
-
-# --- Detect existing install ---
-if [[ -f "$INSTALL_DIR/play_news.sh" ]]; then
-    echo -e "${YELLOW}Existing installation detected. Updating scripts and audio files...${NC}"
-    UPDATING=true
-else
-    UPDATING=false
-fi
 
 # --- Ask about cron update if existing install ---
 if [[ "$UPDATING" == "true" ]]; then
@@ -443,6 +441,10 @@ fi
 
 # --- Set ownership ---
 chown -R root:asterisk "$INSTALL_DIR"
+
+# --- Write installed version ---
+echo "$VERSION" > "$INSTALL_DIR/.version"
+
 echo ""
 echo -e "${GREEN}Files installed to: $INSTALL_DIR${NC}"
 
