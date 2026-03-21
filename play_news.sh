@@ -269,7 +269,14 @@ newslog "Connecting node $NODE to news node $NEWSNODE"
 LOG_START_LINE=$(wc -l < "$logfile" 2>/dev/null || echo 0)
 elapsed_time=0
 
-newslog "Monitoring for disconnect from node $NEWSNODE (backup timer: 1500s)"
+# ARRL is typically ~15 min; ARN can run up to ~25 min
+if [ "$NEWSTYPE" == "ARRL" ]; then
+	BACKUP_TIMER=1200
+else
+	BACKUP_TIMER=1500
+fi
+
+newslog "Monitoring for disconnect from node $NEWSNODE (backup timer: ${BACKUP_TIMER}s)"
 
 while true; do
 	if tail -n +"$((LOG_START_LINE + 1))" "$logfile" 2>/dev/null \
@@ -279,8 +286,8 @@ while true; do
 	fi
 	sleep 1
 	((elapsed_time++))
-	if [ $elapsed_time -gt 1500 ]; then
-		newslog "WARNING: Backup timer exceeded (1500s). Assuming news has finished."
+	if [ $elapsed_time -gt $BACKUP_TIMER ]; then
+		newslog "WARNING: Backup timer exceeded (${BACKUP_TIMER}s). Assuming news has finished."
 		break
 	fi
 done
