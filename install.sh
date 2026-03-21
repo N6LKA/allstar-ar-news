@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.1"
+VERSION="1.1.2"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -274,6 +274,9 @@ echo "--- Downloading files ---"
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR/audio_files"
 mkdir -p "$INSTALL_DIR/audio_files/tts"
+# Allow asterisk user to write audio files during install (asl-tts runs as asterisk)
+chown root:asterisk "$INSTALL_DIR/audio_files" "$INSTALL_DIR/audio_files/tts"
+chmod 775 "$INSTALL_DIR/audio_files" "$INSTALL_DIR/audio_files/tts"
 
 # --- Download scripts ---
 for script in play_news.sh cancel_news.sh generate_audio.sh test_audio.sh uninstall.sh status.sh; do
