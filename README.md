@@ -35,7 +35,7 @@ Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic 
 Run the following command as root or with sudo for both fresh installs and updates:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master/install.sh)
+bash <(curl -fsSL -H "Cache-Control: no-cache" https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master/install.sh)
 ```
 
 The installer will:
