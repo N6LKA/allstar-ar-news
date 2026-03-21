@@ -79,9 +79,9 @@ else
     echo -e "${GREEN}asl3-link-activity-monitor found.${NC}"
 fi
 
-if ! dpkg -s asl3-connection-log &>/dev/null; then
+if [[ ! -f "/etc/asterisk/scripts/conlog.sh" ]]; then
     echo "asl3-connection-log not found. Installing..."
-    if apt-get install -y asl3-connection-log; then
+    if bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/asl3-connection-log/main/install.sh); then
         echo -e "${GREEN}asl3-connection-log installed.${NC}"
     else
         echo -e "${RED}ERROR: Could not install asl3-connection-log.${NC}"
