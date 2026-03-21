@@ -51,6 +51,15 @@ else
     UPDATING=false
 fi
 
+# --- Ask about cron update if existing install ---
+if [[ "$UPDATING" == "true" ]]; then
+    echo ""
+    read -rp "Update cron schedule? [y/N]: " _UPDATE_CRON
+    [[ "${_UPDATE_CRON,,}" == "y" ]] && UPDATE_CRON=true || UPDATE_CRON=false
+else
+    UPDATE_CRON=true
+fi
+
 # --- Check/install dependencies ---
 echo ""
 echo "--- Checking dependencies ---"
@@ -139,6 +148,8 @@ compute_cron_start() {
 # =============================================================================
 # Collect user inputs
 # =============================================================================
+
+if [[ "$UPDATE_CRON" == "true" ]]; then
 
 echo ""
 echo "--- Configuration ---"
@@ -266,6 +277,8 @@ if [[ $TOTAL_SLOTS -eq 0 ]]; then
     echo -e "${RED}ERROR: At least one news slot is required.${NC}"
     exit 1
 fi
+
+fi # end UPDATE_CRON
 
 echo ""
 echo "--- Downloading files ---"
@@ -434,29 +447,34 @@ echo ""
 echo -e "${GREEN}Files installed to: $INSTALL_DIR${NC}"
 
 # --- Cron setup ---
-echo ""
-echo "--- Setting up cron jobs (asterisk user) ---"
-echo ""
+if [[ "$UPDATE_CRON" == "true" ]]; then
+    echo ""
+    echo "--- Setting up cron jobs (asterisk user) ---"
+    echo ""
 
-CRON_COMMENT="# ARRL/ARN Audio News"
+    CRON_COMMENT="# ARRL/ARN Audio News"
 
-# Build new cron lines for all slots
-NEW_CRON_LINES=""
-for i in "${!SLOT_TYPES[@]}"; do
-    _CRON_START=$(compute_cron_start "${SLOT_TIMES[$i]}")
-    NEW_CRON_LINES+="$_CRON_START * * ${SLOT_CRON_DAYS[$i]} $INSTALL_DIR/play_news.sh ${SLOT_TYPES[$i]} ${SLOT_TIMES[$i]} $NODE L >/dev/null 2>&1"$'\n'
-done
+    # Build new cron lines for all slots
+    NEW_CRON_LINES=""
+    for i in "${!SLOT_TYPES[@]}"; do
+        _CRON_START=$(compute_cron_start "${SLOT_TIMES[$i]}")
+        NEW_CRON_LINES+="$_CRON_START * * ${SLOT_CRON_DAYS[$i]} $INSTALL_DIR/play_news.sh ${SLOT_TYPES[$i]} ${SLOT_TIMES[$i]} $NODE L >/dev/null 2>&1"$'\n'
+    done
 
-# Remove existing play_news.sh lines and their comment, strip trailing blank
-# lines, then append new ones with exactly one blank line separator
-(crontab -u asterisk -l 2>/dev/null \
-    | grep -v "play_news\.sh" \
-    | grep -v "# ARRL/ARN Audio News" \
-    | awk '/[[:graph:]]/{found=NR} {lines[NR]=$0} END{for(i=1;i<=found;i++) print lines[i]}'; \
-    echo ""; echo "$CRON_COMMENT"; printf "%s" "$NEW_CRON_LINES") \
-    | crontab -u asterisk -
+    # Remove existing play_news.sh lines and their comment, strip trailing blank
+    # lines, then append new ones with exactly one blank line separator
+    (crontab -u asterisk -l 2>/dev/null \
+        | grep -v "play_news\.sh" \
+        | grep -v "# ARRL/ARN Audio News" \
+        | awk '/[[:graph:]]/{found=NR} {lines[NR]=$0} END{for(i=1;i<=found;i++) print lines[i]}'; \
+        echo ""; echo "$CRON_COMMENT"; printf "%s" "$NEW_CRON_LINES") \
+        | crontab -u asterisk -
 
-echo -e "${GREEN}Cron jobs configured for asterisk user.${NC}"
+    echo -e "${GREEN}Cron jobs configured for asterisk user.${NC}"
+else
+    echo ""
+    echo -e "${YELLOW}Cron schedule unchanged.${NC}"
+fi
 
 # --- Summary ---
 echo ""
