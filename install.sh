@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.3"
+VERSION="1.1.4"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -359,7 +359,7 @@ if [[ "$UPDATING" == "false" ]]; then
         tod=$(time_of_day "$time")
         if [[ "$type" == "ARRL" ]]; then
             cat > "$INSTALL_DIR/audio_files/arrl-qst-news.txt" << EOF
-QST QST QST
+QST, QST, QST,
 
 Please stand by for a re-transmission of the most recent eh R R L Audio News.
 
@@ -373,7 +373,7 @@ EOF
             echo -e "${GREEN}arrl-qst-news.txt generated.${NC}"
         else
             cat > "$INSTALL_DIR/audio_files/arn-qst-news.txt" << EOF
-QST QST QST
+QST, QST, QST,
 
 Please stand by for a re-transmission of the most recent Amateur Radio Newsline.
 
