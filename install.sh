@@ -6,7 +6,7 @@
 
 VERSION="1.1.0"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
-REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/main"
+REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
