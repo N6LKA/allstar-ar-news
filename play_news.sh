@@ -250,6 +250,14 @@ QST_WAIT=$(audio_duration "$TMPDIR/QST.ul")
 newslog "Waiting ${QST_WAIT}s for QST announcement to finish."
 sleep "$QST_WAIT"
 
+# Play start announcement
+newslog "Playing News Start announcement"
+cat "$VOICEDIR/silence1.ul" "$PLAYVOICEDIR/${NEWSTYPE}start.ul" > "$TMPDIR/start.ul"
+/usr/sbin/asterisk -rx "rpt $MODE $NODE $TMPDIR/start"
+START_WAIT=$(audio_duration "$TMPDIR/start.ul")
+newslog "Waiting ${START_WAIT}s for Start announcement to finish."
+sleep "$START_WAIT"
+
 # Connect to news node
 newslog "Connecting node $NODE to news node $NEWSNODE"
 /usr/sbin/asterisk -rx "rpt fun $NODE *2$NEWSNODE"
