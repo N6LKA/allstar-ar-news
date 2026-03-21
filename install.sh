@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.0"
+VERSION="1.1.1"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -81,7 +81,8 @@ fi
 
 if [[ ! -f "/etc/asterisk/scripts/conlog.sh" ]]; then
     echo "asl3-connection-log not found. Installing..."
-    if bash <(curl -fsSL https://raw.githubusercontent.com/N6LKA/asl3-connection-log/main/install.sh); then
+    _tmp=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/N6LKA/asl3-connection-log/main/install.sh -o "$_tmp" && bash "$_tmp"; _rc=$?; rm -f "$_tmp"
+    if [[ $_rc -eq 0 ]]; then
         echo -e "${GREEN}asl3-connection-log installed.${NC}"
     else
         echo -e "${RED}ERROR: Could not install asl3-connection-log.${NC}"
