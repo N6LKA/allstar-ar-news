@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.4"
+VERSION="1.1.5"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -447,10 +447,12 @@ for i in "${!SLOT_TYPES[@]}"; do
     NEW_CRON_LINES+="$_CRON_START * * ${SLOT_CRON_DAYS[$i]} $INSTALL_DIR/play_news.sh ${SLOT_TYPES[$i]} ${SLOT_TIMES[$i]} $NODE L >/dev/null 2>&1"$'\n'
 done
 
-# Remove existing play_news.sh lines and their comment, then append new ones
+# Remove existing play_news.sh lines and their comment, strip trailing blank
+# lines, then append new ones with exactly one blank line separator
 (crontab -u asterisk -l 2>/dev/null \
     | grep -v "play_news\.sh" \
-    | grep -v "# ARRL/ARN Audio News"; \
+    | grep -v "# ARRL/ARN Audio News" \
+    | awk '/[[:graph:]]/{found=NR} {lines[NR]=$0} END{for(i=1;i<=found;i++) print lines[i]}'; \
     echo ""; echo "$CRON_COMMENT"; printf "%s" "$NEW_CRON_LINES") \
     | crontab -u asterisk -
 
