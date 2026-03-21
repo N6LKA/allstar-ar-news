@@ -1,5 +1,10 @@
 # allstar-ar-news
 
+<table><tr>
+<td><img src="images/arrl-logo.jpg" height="120" alt="ARRL Audio News"></td>
+<td><img src="images/arn-logo.jpg" height="120" alt="Amateur Radio Newsline"></td>
+</tr></table>
+
 A bash script to play the **ARRL Audio News** or **Amateur Radio Newsline (ARN)** on an [ASL3](https://allstarlink.org/) repeater node. Rather than downloading and playing a local audio file, the script connects to the live AllStar news node in Monitor Only mode — allowing the repeater to break for proper IDs during playback instead of cutting at arbitrary points.
 
 Includes 10-minute and 5-minute pre-announcements, QST announcements, automatic link activity monitor management, playback logging, and a cancel script for emergency use during playback.
