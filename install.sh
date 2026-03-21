@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.5"
+VERSION="1.1.6"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
