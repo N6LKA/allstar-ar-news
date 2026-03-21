@@ -4,7 +4,7 @@
 # https://github.com/N6LKA/allstar-ar-news
 # =============================================================================
 
-VERSION="1.1.7"
+VERSION="1.1.8"
 INSTALL_DIR="/etc/asterisk/scripts/ar-news"
 REPO="https://raw.githubusercontent.com/N6LKA/allstar-ar-news/master"
 
@@ -327,7 +327,7 @@ AUDIO_FILES=(
 )
 for f in "${AUDIO_FILES[@]}"; do
     echo "Downloading $f..."
-    curl -fsSL "$REPO/$f" -o "$INSTALL_DIR/audio_files/$f"
+    curl -fsSL "$REPO/audio_files/$f" -o "$INSTALL_DIR/audio_files/$f"
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}ERROR: Failed to download $f${NC}"
         exit 1
@@ -342,7 +342,7 @@ TEXT_FILES=(
 )
 for f in "${TEXT_FILES[@]}"; do
     echo "Downloading $f..."
-    curl -fsSL "$REPO/$f" -o "$INSTALL_DIR/audio_files/$f"
+    curl -fsSL "$REPO/audio_files/$f" -o "$INSTALL_DIR/audio_files/$f"
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}ERROR: Failed to download $f${NC}"
         exit 1
