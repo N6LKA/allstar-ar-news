@@ -39,9 +39,16 @@ newslog() {
 	ts=$(date '+%Y-%m-%d %H:%M:%S')
 	echo "[$ts] $msg"
 	if [[ -n "$NEWSLOGFILE" ]]; then
-		echo "[$ts] $msg" >> "$NEWSLOGFILE" 2>/dev/null
+		echo "[$ts] $msg" >> "$NEWSLOGFILE"
 	fi
 }
+
+# Ensure log file is writable by both root and asterisk user.
+touch "$NEWSLOGFILE" 2>/dev/null
+if [[ $EUID -eq 0 ]]; then
+    chown root:asterisk "$NEWSLOGFILE" 2>/dev/null
+    chmod 664 "$NEWSLOGFILE" 2>/dev/null
+fi
 
 # ===== End logging setup =====
 
