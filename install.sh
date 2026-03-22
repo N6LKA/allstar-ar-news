@@ -289,11 +289,12 @@ mkdir -p "$INSTALL_DIR/audio_files/tts"
 chown root:asterisk "$INSTALL_DIR/audio_files" "$INSTALL_DIR/audio_files/tts"
 chmod 775 "$INSTALL_DIR/audio_files" "$INSTALL_DIR/audio_files/tts"
 
-# Create log file with correct ownership so it is writable by both root
-# and the asterisk cron user from the start.
+# Create log file owned by asterisk so it is writable by the asterisk
+# user regardless of how scripts are invoked (cron, DTMF macro, etc.).
+# Root can always write to any file as superuser.
 touch "$INSTALL_DIR/ar-news.log"
-chown root:asterisk "$INSTALL_DIR/ar-news.log"
-chmod 664 "$INSTALL_DIR/ar-news.log"
+chown asterisk:asterisk "$INSTALL_DIR/ar-news.log"
+chmod 644 "$INSTALL_DIR/ar-news.log"
 
 # --- Download scripts ---
 for script in play_news.sh cancel_news.sh generate_audio.sh test_audio.sh uninstall.sh status.sh; do
