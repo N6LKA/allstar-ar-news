@@ -62,6 +62,12 @@ fi
 
 newslog "cancel_news.sh triggered on node $NODE"
 
+# Exit gracefully if news is not currently playing
+if ! pgrep -f play_news.sh > /dev/null; then
+    newslog "News is not playing. No action taken."
+    exit 0
+fi
+
 clear
 
 # Disable Local Telemetry Output
