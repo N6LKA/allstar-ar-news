@@ -68,6 +68,15 @@
 		fi
 	}
 
+# Ensure log file exists and is writable by both root and asterisk user.
+# If root ran this script previously, the log file may be owned by root
+# and unwritable by the asterisk cron user. Fix it if we can.
+touch "$NEWSLOGFILE" 2>/dev/null
+if [[ $EUID -eq 0 ]]; then
+    chown root:asterisk "$NEWSLOGFILE" 2>/dev/null
+    chmod 664 "$NEWSLOGFILE" 2>/dev/null
+fi
+
 # ===== End logging setup =====
 
 # ===== Set audio playback directory =====
