@@ -65,6 +65,15 @@ newslog "cancel_news.sh triggered on node $NODE"
 # Exit gracefully if news is not currently playing
 if ! pgrep -f play_news.sh > /dev/null; then
     newslog "News is not playing. No action taken."
+    # Still re-enable link activity monitor in case it was left disabled
+    if [ "$LNKACTTIMER" == "1" ]; then
+        newslog "Re-enabling Link Activity Monitor."
+        if [ "$LNKACTTYPE" == "native" ]; then
+            /usr/sbin/asterisk -rx "rpt cmd $NODE cop 45"
+        else
+            /usr/local/bin/lnkact enable
+        fi
+    fi
     exit 0
 fi
 
