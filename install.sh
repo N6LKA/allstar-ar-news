@@ -296,6 +296,22 @@ touch "$INSTALL_DIR/ar-news.log"
 chown asterisk:asterisk "$INSTALL_DIR/ar-news.log"
 chmod 644 "$INSTALL_DIR/ar-news.log"
 
+# Install logrotate config to keep the log to approximately 1 month of data.
+# Rotates monthly, retains 1 compressed archive, then discards older data.
+# Note: if you change NEWSLOGFILE in ar-news.conf, update /etc/logrotate.d/ar-news to match.
+cat > /etc/logrotate.d/ar-news << EOF
+$INSTALL_DIR/ar-news.log {
+    monthly
+    rotate 1
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+EOF
+chmod 644 /etc/logrotate.d/ar-news
+echo -e "${GREEN}Logrotate config installed (/etc/logrotate.d/ar-news).${NC}"
+
 # --- Download scripts ---
 for script in play_news.sh cancel_news.sh generate_audio.sh test_audio.sh uninstall.sh status.sh; do
     echo "Downloading $script..."

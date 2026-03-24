@@ -53,6 +53,12 @@ echo ""
 read -rp "Are you sure you want to uninstall? [y/N]: " CONFIRM
 [[ "${CONFIRM,,}" != "y" ]] && echo "Uninstall cancelled." && exit 0
 
+# --- Remove logrotate config ---
+if [[ -f /etc/logrotate.d/ar-news ]]; then
+    rm -f /etc/logrotate.d/ar-news
+    echo -e "${GREEN}Logrotate config removed.${NC}"
+fi
+
 # --- Remove cron jobs ---
 echo ""
 echo "--- Removing cron jobs ---"
