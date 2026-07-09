@@ -254,6 +254,6 @@ The uninstaller will remove the cron entries from the asterisk user's crontab, d
 
 ## License
 
-MIT License — Copyright 2026 Larry K. Aycock (N6LKA)
+GNU General Public License v3.0 (GPLv3) — Copyright 2026 Larry K. Aycock (N6LKA)
 
 See [LICENSE](LICENSE) for details.
