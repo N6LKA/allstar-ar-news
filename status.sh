@@ -1,7 +1,7 @@
 #!/bin/bash
-# status.sh - Show allstar-ar-news playback status and upcoming schedule.
+# status.sh - Show ASL3-Audio-News playback status and upcoming schedule.
 # Copyright (c) 2026 Larry K. Aycock (N6LKA)
-# https://github.com/N6LKA/allstar-ar-news
+# https://github.com/N6LKA/ASL3-Audio-News
 #
 # Usage: status.sh
 
@@ -16,7 +16,7 @@ echo ""
 
 # --- Check installation ---
 if [[ ! -f "$INSTALL_DIR/play_news.sh" ]]; then
-    echo "ERROR: allstar-ar-news does not appear to be installed ($INSTALL_DIR/play_news.sh not found)."
+    echo "ERROR: ASL3-Audio-News does not appear to be installed ($INSTALL_DIR/play_news.sh not found)."
     echo ""
     exit 1
 fi
