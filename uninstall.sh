@@ -1,7 +1,7 @@
 #!/bin/bash
-# uninstall.sh - Remove allstar-ar-news from the system.
+# uninstall.sh - Remove ASL3-Audio-News from the system.
 # Copyright (c) 2026 Larry K. Aycock (N6LKA)
-# https://github.com/N6LKA/allstar-ar-news
+# https://github.com/N6LKA/ASL3-Audio-News
 #
 # Usage: sudo uninstall.sh
 #
@@ -20,7 +20,7 @@ NC='\033[0m'
 echo ""
 echo "=============================================="
 echo "  AllStar AR News Player - Uninstaller"
-echo "  https://github.com/N6LKA/allstar-ar-news"
+echo "  https://github.com/N6LKA/ASL3-Audio-News"
 echo "=============================================="
 echo ""
 
