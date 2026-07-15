@@ -1,7 +1,7 @@
 #!/bin/bash
 # generate_audio.sh - Generate TTS audio announcement files for ar-news.
 # Copyright (c) 2026 Larry K. Aycock (N6LKA)
-# https://github.com/N6LKA/allstar-ar-news
+# https://github.com/N6LKA/ASL3-Audio-News
 #
 # Reads transcript (.txt) files from VOICEDIR and generates .ul audio files
 # using asl-tts (piper TTS engine). Always overwrites existing files.
