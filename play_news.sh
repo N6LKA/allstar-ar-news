@@ -1,7 +1,7 @@
 #!/bin/bash
 # play_news.sh - Play ARRL Audio News or Amateur Radio Newsline on an ASL3 node.
 # Copyright (c) 2026 Larry K. Aycock (N6LKA)
-# https://github.com/N6LKA/allstar-ar-news
+# https://github.com/N6LKA/ASL3-Audio-News
 #
 # Based on the original playnews script by Doug Crompton (HamVOIP).
 # Rewritten to connect directly to the AllStar/Echolink news nodes in Monitor
